@@ -1,0 +1,1 @@
+SELECT * FROM payments.payment_attempts WHERE attempt_id = ? AND merchant_id = ?;

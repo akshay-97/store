@@ -1,74 +1,18 @@
 use std::env;
-
-type ResultT<T> = Result<T, anyhow::Error>;
-
-struct Config{
-    #[cfg(feature = "cassandra")]
-    db_config : Cassconfig,
-    #[cfg(not(feature = "cassandra"))]
-    db_config : RedisConfig
-}
-
-impl Config{
-    pub async fn get_config() -> ResultT<Self>{
-        let db_config = {
-            #[cfg(feature = "cassandra")]
-            CassConfig::new();
-            #[cfg(not(feature = "cassandra"))]
-            RedisConfig::new()
-        }?;
-        Ok(Self{ db_config})
-    }
-}
-
-struct Cassconfig{
-    url : String,
-    password: String,
-    username: String,
-    r_factor: Option<usize>,
-}
-
 use anyhow::{Context, Result};
+mod store;
+mod models;
+mod types;
 
-impl Cassconfig{
-    fn new() -> Result<Self, anyhow::Error>{
-        let url= env::var("CASSANDRA_URL").context("CASSANDRA_URL not found")?;
-        let password = env::var("CASSANDRA_PASSWORD").context("CASSANDRA_PASSWORD not found")?;
-        let username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
-        Ok(Self{
-            url,
-            password,
-            username,
-            r_factor : None
-        })
-        
-    }
-}
-
-impl RedisConfig{
-    fn new() -> ResultT<Self>{
-        let url= env::var("REDIS_URL").context("Redis url not found")?;
-        let pool_size = env::var("REDIS_POOL_SIZE").ok().and_then(|x| x.parse::<usize>().ok()).unwrap_or(5);
-        Ok(Self{
-            url,
-            pool_size
-        })
-    }
-}
-
-struct RedisConfig{
-    url: String,
-    pool_size : usize,
-}
-
-
-use axum::routing::get;
+use axum::{response::IntoResponse, routing::get};
 use tokio::net::TcpListener;
+use crate::store::App;
+use axum::extract::{State, Path};
 
 #[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
-    let config = Config::get_config().await?;
-    let store = config.get_store().await?;
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    //let config = Config::get_config().await?;
+    let store = App::create_state().await?;
 
     let server_host = env::var("SERVER_HOST").unwrap_or("localhost".to_string());
     let server_port = env::var("SERVER_PORT").unwrap_or("8000".to_string());
@@ -94,10 +38,27 @@ async fn main() -> Result<(), anyhow::Error> {
 
 }
 
-
-/*
-trait Store {
-    fn get_connection
+async fn create_payment(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.create_intent(payment_id).await.map_err(|_| "db failure")?;
+    Ok(axum::Json(()))
 }
 
-*/
+async fn pay(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|_| "db failure")?;
+    let _ = app.db.create_attempt(payment_id).await.map_err(|_| "db failure")?;
+    Ok(axum::Json(()))
+}
+async fn update(State(app) : State<App> , Path(payment_attempt_id): Path<String>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.update_attempt(payment_attempt_id.as_ref()).await.map_err(|_| "db failure")?;
+    Ok(axum::Json(()))
+}
+async fn retrieve_attempt(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.retrieve_all(payment_id.as_ref()).await.map_err(|_| "db failure")?;
+    Ok(axum::Json(()))
+}
+
+async fn retrieve(State(app): State<App>, Path(payment_id) : Path<String>) -> Result<impl IntoResponse, String>
+{
+    let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|_| "db failure")?;
+    Ok(axum::Json(()))
+}
