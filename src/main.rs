@@ -3,6 +3,7 @@ use anyhow::{Context, Result};
 mod store;
 mod models;
 mod types;
+mod utils;
 
 use axum::{response::IntoResponse, routing::get};
 use tokio::net::TcpListener;

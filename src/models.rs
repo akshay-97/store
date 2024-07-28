@@ -39,7 +39,7 @@ impl PaymentAttemptInterface for CassClient {
         let mut statement = self.cassandra_session.statement(insert_attempt_cql());
         
         PaymentAttempt::new(payment_id).populate_statement(&mut statement)?;
-        statement.execute().await?;
+        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
         Ok(())
     }
 
@@ -49,7 +49,7 @@ impl PaymentAttemptInterface for CassClient {
         statement.bind(0, payment_attempt_id)?;
         statement.bind(1, "kaps")?;
     
-        let rows = statement.execute().await?;
+        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND").await?;
         //let mut rows = rows.iter();
     
         let _ = rows.iter().next().context("No rows found")?;
@@ -62,7 +62,7 @@ impl PaymentAttemptInterface for CassClient {
         statement.bind(0, "kaps")?;
         statement.bind(1, payment_id)?;
     
-        let rows = statement.execute().await?;
+        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND_ALL").await?;
         //let mut rows = rows.iter();
     
         let _ = rows.iter().next().context("No rows found")?;
@@ -85,7 +85,7 @@ impl PaymentIntentInterface for CassClient {
         let mut statement = self.cassandra_session.statement(insert_intent_cql());
         
         PaymentIntent::new(payment_id).populate_statement(&mut statement)?;
-        statement.execute().await?;
+        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE").await?;
         Ok(())
     }
 
@@ -95,7 +95,7 @@ impl PaymentIntentInterface for CassClient {
         statement.bind(0, payment_id)?;
         statement.bind(1, "kaps")?;
     
-        let rows = statement.execute().await?;
+        let rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "FIND").await?;
         let _row = rows.iter().next().context("No rows found")?;
         //TODO : deserialize
         Ok(())

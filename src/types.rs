@@ -31,6 +31,7 @@ pub struct PaymentAttempt {
     pub browser_info: Option<serde_json::Value>,
     pub error_code: Option<String>,
     pub payment_token: Option<String>,
+    //TODO: check cql map type conversion
     pub connector_metadata: Option<serde_json::Value>,
     pub payment_experience: Option<PaymentExperience>,
     pub payment_method_type: Option<PaymentMethodType>,
