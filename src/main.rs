@@ -19,6 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server_port = env::var("SERVER_PORT").unwrap_or("8000".to_string());
 
     let router = axum::Router::new()
+        .route("/init_db", get(init_db))
         .route("/create/:payment_id", get(create_payment)) // create payment intent
         .route("/pay/:payment_id", get(pay))// create payment attempt
         .route("/update_attempt/pay/:payment_attempt_id", get(update))
@@ -39,6 +40,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 }
 
+async fn init_db(State(app) : State<App>) -> Result<impl IntoResponse, String>{
+    let _ = app.db.prepare().await.map_err(|_| "init failed")?;
+    Ok(axum::Json(()))
+}
 async fn create_payment(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
     let _ = app.db.create_intent(payment_id).await.map_err(|_| "db failure")?;
     Ok(axum::Json(()))

@@ -4,8 +4,13 @@ use std::env;
 use anyhow::Context;
 
 #[async_trait::async_trait]
+pub trait Init{
+    async fn prepare(&self) -> std::result::Result<(), Box<dyn std::error::Error>>;
+}
+
+#[async_trait::async_trait]
 pub trait StorageInterface : dyn_clone::DynClone +
-    PaymentIntentInterface + PaymentAttemptInterface + Send + Sync + 'static 
+    PaymentIntentInterface + PaymentAttemptInterface + Send + Sync + 'static  + Init
 {}
 
 pub struct App{
@@ -36,6 +41,14 @@ impl App{
 #[derive(Clone)]
 pub struct CassClient{
     pub cassandra_session: Session
+}
+
+#[async_trait::async_trait]
+impl Init for CassClient{
+    async fn prepare(&self) -> std::result::Result<(),Box<dyn std::error::Error> > {
+        let _ = self.cassandra_session.execute(include_str!("schema.cql")).await?;
+        Ok(())
+    }
 }
 
 impl StorageInterface for CassClient {}
