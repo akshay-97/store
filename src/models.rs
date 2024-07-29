@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::{types::*, store::RedisClient};
 use crate::store::CassClient;
 use cassandra_cpp::{BindRustType, LendingIterator};
 use anyhow::Context;
@@ -28,7 +28,7 @@ fn insert_attempt_cql() -> String{
 }
 
 fn select_payment_attempt_all() -> String{
-    "SELECT * FROM payments.payment_attempts WHERE payment_id = ? AND merchant_id = ?;"
+    "SELECT * FROM payments.payment_attempts WHERE merchant_id = ? AND payment_id = ?;"
         .to_owned()
 }
 
@@ -102,6 +102,24 @@ impl PaymentIntentInterface for CassClient {
     }
 
     async fn update_intent<'a>(&self, _payment_intent_id : &'a str) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl PaymentAttemptInterface for RedisClient {
+    async fn create_attempt(&self, payment_id: String) -> Result<() , Box<dyn std::error::Error>>{
+        let key = format!("mid_kaps_payment_id_{}", payment_id);
+        let field = format!("payment_id_{}", payment_id);
+        let value = PaymentAttempt::new(payment_id);
+        self.execute(
+            key,
+            Hsetnx(value, field) , // enum ; hsetnx<v>, hset<v>, hget
+        ).await?;
+        /*
+        self.redis_conn.hsetnx(key, field, value)
+        pub async fn wait<C: ClientLike>(client: &C, numreplicas: i64, timeout: i64) -> Result<RedisValue, RedisError>
+        */
         Ok(())
     }
 }
