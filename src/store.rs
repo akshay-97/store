@@ -58,6 +58,7 @@ impl CassClient{
         let url= env::var("CASSANDRA_URL").context("CASSANDRA_URL not found")?;
         let password = env::var("CASSANDRA_PASSWORD").context("CASSANDRA_PASSWORD not found")?;
         let username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
+        set_level(LogLevel::DEBUG);
         let mut cluster = Cluster::default();
         cluster
             .set_contact_points(&url)?

@@ -1,7 +1,7 @@
 CREATE KEYSPACE IF NOT EXISTS payments
 WITH REPLICATION = {
   'class' : 'SimpleStrategy',
-  'replication_factor' : 2
+  'replication_factor' : 1
 };
 
 
@@ -105,10 +105,10 @@ CREATE TABLE IF NOT EXISTS payments.payment_intents (
     request_incremental_authorization text,
     incremental_authorization_allowed boolean,
     authorization_count int,
-    session_expiry timestamp,
+    session_expiry text,
     fingerprint_id text,
     request_external_three_ds_authentication boolean,
     charges text,
     frm_metadata text,
-    PRIMARY_KEY((payment_id, merchant_id))
+    PRIMARY KEY ((payment_id, merchant_id))
 );

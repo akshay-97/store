@@ -132,11 +132,11 @@ impl PaymentAttempt{
         Ok(())
     }
 
-    pub fn new(i : String) -> Self{
+    pub fn new(i : String, version: String) -> Self{
         Self
             {  payment_id: i.clone(),
                 merchant_id:"kaps".to_owned(),
-                attempt_id: format!("attempt_{}", &i),
+                attempt_id: format!("attempt_{}_{}", &i, version),
                 status: AttemptStatus::AuthenticationFailed,
                 amount: i64::MAX,
                 currency: Some(Currency::USD),
@@ -347,7 +347,7 @@ impl PaymentIntent{
         for_opt(stmt, &self.session_expiry, 38)?;
         opt_string(stmt, &self.fingerprint_id, 39)?;
         e_for_opt(stmt, &self.request_external_three_ds_authentication, 40)?;
-        for_opt(stmt, &self.charges, 42)?;
+        for_opt(stmt, &self.charges, 41)?;
         for_opt(stmt, &self.frm_metadata, 42)?;
         Ok(())
     }

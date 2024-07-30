@@ -12,14 +12,14 @@ pub trait PaymentIntentInterface{
 
 #[async_trait::async_trait]
 pub trait PaymentAttemptInterface{
-    async fn create_attempt(&self, payment_id : String) -> Result<(), Box<dyn std::error::Error>>;
+    async fn create_attempt(&self, payment_id : String, version : String) -> Result<(), Box<dyn std::error::Error>>;
     async fn retrieve_by_id<'a>(&self, payment_attempt_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
     async fn retrieve_all<'a>(&self, payment_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
     async fn update_attempt<'a>(&self, payment_attempt_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 fn insert_intent_cql() -> String{
-    "INSERT INTO payments.payment_intents (payment_id, merchant_id, status, amount, currency, amount_captured, customer_id, description, return_url, metadata, connector_id, shipping_address_id, billing_address_id, statement_descriptor_name, statement_descriptor_suffix, created_at, modified_at, last_synced, setup_future_usage, off_session, client_secret, active_attempt_id, business_country, business_label, order_details, allowed_payment_method_types, connector_metadata, feature_metadata, attempt_count, profile_id, merchant_decision, payment_link_id, payment_confirm_source, updated_by, surcharge_applicable, request_incremental_authorization, incremental_authorization_allowed, authorization_count, session_expiry, fingerprint_id, request_external_three_ds_authentication, charges, frm_metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" 
+    "INSERT INTO payments.payment_intents (payment_id, merchant_id, status, amount, currency, amount_captured, customer_id, description, return_url, metadata, connector_id, shipping_address_id, billing_address_id, statement_descriptor_name, statement_descriptor_suffix, created_at, modified_at, last_synced, setup_future_usage, off_session, client_secret, active_attempt_id, business_country, business_label, order_details, allowed_payment_method_types, connector_metadata, feature_metadata, attempt_count, profile_id, merchant_decision, payment_link_id, payment_confirm_source, updated_by, surcharge_applicable, request_incremental_authorization, incremental_authorization_allowed, authorization_count, session_expiry, fingerprint_id, request_external_three_ds_authentication, charges, frm_metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);" 
         .to_owned()
 }
 fn insert_attempt_cql() -> String{
@@ -35,10 +35,10 @@ fn select_payment_attempt_all() -> String{
 
 #[async_trait::async_trait]
 impl PaymentAttemptInterface for CassClient {
-    async fn create_attempt(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>>{
+    async fn create_attempt(&self, payment_id: String, version : String) -> Result<(), Box<dyn std::error::Error>>{
         let mut statement = self.cassandra_session.statement(insert_attempt_cql());
         
-        PaymentAttempt::new(payment_id).populate_statement(&mut statement)?;
+        PaymentAttempt::new(payment_id,version).populate_statement(&mut statement)?;
         let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
         Ok(())
     }
@@ -59,8 +59,8 @@ impl PaymentAttemptInterface for CassClient {
     async fn retrieve_all<'a>(&self, payment_id : &'a str) -> Result<(), Box<dyn std::error::Error>>{
         let mut statement = self.cassandra_session.statement(select_payment_attempt_all());
 
-        statement.bind(0, "kaps")?;
-        statement.bind(1, payment_id)?;
+        statement.bind(0, payment_id)?;
+        statement.bind(1, "kaps")?;
     
         let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND_ALL").await?;
         //let mut rows = rows.iter();
@@ -75,7 +75,7 @@ impl PaymentAttemptInterface for CassClient {
 
 //TODO: convert to generated statements
 fn retrieve_payment_cql() -> String{
-    "SELECT * from payments.payment_intents WHERE payment_id ? AND merchant_id ?;"
+    "SELECT * from payments.payment_intents WHERE payment_id = ? AND merchant_id = ?;"
         .to_owned()
 }
 
@@ -85,7 +85,14 @@ impl PaymentIntentInterface for CassClient {
         let mut statement = self.cassandra_session.statement(insert_intent_cql());
         
         PaymentIntent::new(payment_id).populate_statement(&mut statement)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE").await?;
+
+        println!("what is statement {:?} ", statement);
+
+        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE").await
+            .map_err(|e| {
+                println!("intent create error {}", e.to_string());
+                e
+            })?;
         Ok(())
     }
 

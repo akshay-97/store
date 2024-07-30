@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = axum::Router::new()
         .route("/init_db", get(init_db))
         .route("/create/:payment_id", get(create_payment)) // create payment intent
-        .route("/pay/:payment_id", get(pay))// create payment attempt
+        .route("/pay/:payment_id/:version", get(pay))// create payment attempt
         .route("/update_attempt/pay/:payment_attempt_id", get(update))
         .route("/retrieve/payment_attempt/:payment_id", get(retrieve_attempt))
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
@@ -45,26 +45,26 @@ async fn init_db(State(app) : State<App>) -> Result<impl IntoResponse, String>{
     Ok(axum::Json(()))
 }
 async fn create_payment(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
-    let _ = app.db.create_intent(payment_id).await.map_err(|_| "db failure")?;
+    let _ = app.db.create_intent(payment_id).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
 
-async fn pay(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
-    let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|_| "db failure")?;
-    let _ = app.db.create_attempt(payment_id).await.map_err(|_| "db failure")?;
+async fn pay(State(app) : State<App> ,Path((payment_id,version)): Path<(String,String)>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|e| e.to_string())?;
+    let _ = app.db.create_attempt(payment_id, version).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
 async fn update(State(app) : State<App> , Path(payment_attempt_id): Path<String>) -> Result<impl IntoResponse , String>{
-    let _ = app.db.update_attempt(payment_attempt_id.as_ref()).await.map_err(|_| "db failure")?;
+    let _ = app.db.update_attempt(payment_attempt_id.as_ref()).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
 async fn retrieve_attempt(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
-    let _ = app.db.retrieve_all(payment_id.as_ref()).await.map_err(|_| "db failure")?;
+    let _ = app.db.retrieve_all(payment_id.as_ref()).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
 
 async fn retrieve(State(app): State<App>, Path(payment_id) : Path<String>) -> Result<impl IntoResponse, String>
 {
-    let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|_| "db failure")?;
+    let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
