@@ -19,3 +19,5 @@ anyhow = "1.0.86"
 axum = "0.7.5"
 dyn-clone = {version = "*"}
 async-trait = {version = "*"}
+metrics = { version = "0.22", default-features = false }
+metrics-exporter-prometheus = { version = "0.13", default-features = false }

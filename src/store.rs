@@ -56,12 +56,14 @@ impl StorageInterface for CassClient {}
 impl CassClient{
     pub async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>>{
         let url= env::var("CASSANDRA_URL").context("CASSANDRA_URL not found")?;
+        let port = env::var("CASSANDRA_PORT").ok().and_then(|x| x.parse::<u16>().ok()).unwrap_or(9042);
         let password = env::var("CASSANDRA_PASSWORD").context("CASSANDRA_PASSWORD not found")?;
         let username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
         set_level(LogLevel::DEBUG);
         let mut cluster = Cluster::default();
         cluster
             .set_contact_points(&url)?
+            .set_port(port)?
             .set_credentials(&username, &password)?
             .set_load_balance_round_robin();
         
