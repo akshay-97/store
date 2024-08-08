@@ -353,7 +353,7 @@ impl PaymentIntent{
     }
 }
 
-fn get_large_value() -> serde_json::Value {
+pub fn get_large_value() -> serde_json::Value {
     serde_json::json!({
         "merchant_id": "merchantasd",
         "locker_id": "m0010",
@@ -409,7 +409,7 @@ fn enum_parse<T: serde::Serialize>(em: &T) -> Result<String, Box<dyn std::error:
     Ok(serde_json::to_string(em)?)
 }
 
-fn for_opt<T: serde::Serialize>(
+pub fn for_opt<T: serde::Serialize>(
     stat: &mut Statement,
     data: &Option<T>,
     loc: usize,

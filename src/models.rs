@@ -15,7 +15,7 @@ pub trait PaymentAttemptInterface{
     async fn create_attempt(&self, payment_id : String, version : String) -> Result<(), Box<dyn std::error::Error>>;
     async fn retrieve_by_id<'a>(&self, payment_attempt_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
     async fn retrieve_all<'a>(&self, payment_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
-    async fn update_attempt<'a>(&self, payment_attempt_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
+    async fn update_attempt<'a>(&self, payment_id: &'a str, version : String) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 fn insert_intent_cql() -> String{
@@ -30,6 +30,16 @@ fn insert_attempt_cql() -> String{
 fn select_payment_attempt_all() -> String{
     "SELECT * FROM payments.payment_attempts WHERE payment_id = ? AND merchant_id = ?;"
         .to_owned()
+}
+
+fn update_attempt_cql() -> String{
+    "UPDATE payments.payment_attempts set connector_metadata = ? WHERE payment_id = ? AND merchant_id = ? AND attempt_id = ?;"
+      .to_owned()
+}
+
+fn update_intent_cql() -> String{
+    "UPDATE payments.payment_intents set status = ? WHERE payment_id = ? AND merchant_id = ?;"
+       .to_string()
 }
 
 
@@ -68,7 +78,15 @@ impl PaymentAttemptInterface for CassClient {
         let _ = rows.iter().next().context("No rows found")?;
         Ok(())
     }
-    async fn update_attempt<'a>(&self, _payment_attempt_id : &'a str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn update_attempt<'a>(&self, payment_intent_id : &'a str, version: String) -> Result<(), Box<dyn std::error::Error>> {
+        let mut statement = self.cassandra_session.statement(update_attempt_cql());
+
+        for_opt(&mut statement, &Some(get_large_value()), 0)?;
+        statement.bind(1, payment_intent_id)?;
+        statement.bind(2,"kaps")?;
+        statement.bind(3, version.as_str())?;
+
+        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
         Ok(())
     }
 }
@@ -108,7 +126,15 @@ impl PaymentIntentInterface for CassClient {
         Ok(())
     }
 
-    async fn update_intent<'a>(&self, _payment_intent_id : &'a str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn update_intent<'a>(&self, payment_intent_id : &'a str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut statement = self.cassandra_session.statement(update_intent_cql());
+
+        statement.bind(0, "SUCCESS")?;
+        statement.bind(1, payment_intent_id)?;
+
+        statement.bind(2,"kaps")?;
+
+        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "UPDATE").await?;
         Ok(())
     }
 }
