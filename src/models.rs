@@ -13,7 +13,6 @@ pub trait PaymentIntentInterface{
 #[async_trait::async_trait]
 pub trait PaymentAttemptInterface{
     async fn create_attempt(&self, payment_id : String, version : String) -> Result<(), Box<dyn std::error::Error>>;
-    async fn retrieve_by_id<'a>(&self, payment_attempt_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
     async fn retrieve_all<'a>(&self, payment_id: &'a str) -> Result<(), Box<dyn std::error::Error>>;
     async fn update_attempt<'a>(&self, payment_id: &'a str, version : String) -> Result<(), Box<dyn std::error::Error>>;
 }
@@ -50,19 +49,6 @@ impl PaymentAttemptInterface for CassClient {
         
         PaymentAttempt::new(payment_id,version).populate_statement(&mut statement)?;
         let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
-        Ok(())
-    }
-
-    async fn retrieve_by_id<'a>(&self, payment_attempt_id: &'a str) -> Result<(),Box<dyn std::error::Error>>{
-        let mut statement = self.cassandra_session.statement(include_str!("select_payment_attempt.cql"));
-
-        statement.bind(0, payment_attempt_id)?;
-        statement.bind(1, "kaps")?;
-    
-        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND").await?;
-        //let mut rows = rows.iter();
-    
-        let _ = rows.iter().next().context("No rows found")?;
         Ok(())
     }
 
