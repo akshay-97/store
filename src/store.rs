@@ -39,7 +39,7 @@ impl App {
             #[cfg(feature = "cassandra")]
             db: Box::new(CassClient::new().await?),
 
-            #[cfg(not(feature = "cassandra"))]
+            #[cfg(feature = "redis")]
             db: Box::new(RedisClient::new().await?),
         })
     }
