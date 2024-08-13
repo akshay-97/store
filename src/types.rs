@@ -64,9 +64,11 @@ pub struct PaymentAttempt {
     pub client_version: Option<String>,
 }
 
+#[cfg(feature = "cassandra")]
 use cassandra_cpp::{BindRustType, Statement};
 
 impl PaymentAttempt {
+    #[cfg(feature = "cassandra")]
     pub fn populate_statement(
         &self,
         stmt: &mut Statement,
@@ -260,7 +262,7 @@ impl PaymentIntent {
             payment_id: i.clone(),
             merchant_id: "kaps".to_string(),
             status: "Processing".to_string(),
-            amount: 1234 as i64,
+            amount: 1234_i64,
             currency: Some(Currency::USD),
             amount_captured: None,
             customer_id: None,
@@ -304,6 +306,8 @@ impl PaymentIntent {
             frm_metadata: None, //Option<pii::SecretSerdeValue>,
         }
     }
+
+    #[cfg(feature = "cassandra")]
     pub fn populate_statement(
         &self,
         stmt: &mut Statement,
@@ -311,6 +315,7 @@ impl PaymentIntent {
         stmt.bind(0, self.payment_id.as_str())?;
         stmt.bind(1, self.merchant_id.as_str())?;
         stmt.bind(2, self.status.as_str())?;
+        #[cfg(feature = "cassandra")]
         stmt.bind(3, self.amount)?;
         for_opt(stmt, &self.currency, 4)?;
         e_for_opt(stmt, &self.amount_captured, 5)?;
@@ -410,6 +415,7 @@ fn enum_parse<T: serde::Serialize>(em: &T) -> Result<String, Box<dyn std::error:
     Ok(serde_json::to_string(em)?)
 }
 
+#[cfg(feature = "cassandra")]
 pub fn for_opt<T: serde::Serialize>(
     stat: &mut Statement,
     data: &Option<T>,
@@ -425,6 +431,7 @@ where
     Ok(())
 }
 
+#[cfg(feature = "cassandra")]
 fn opt_string(
     stat: &mut Statement,
     data: &Option<String>,
@@ -438,6 +445,7 @@ fn opt_string(
     Ok(())
 }
 
+#[cfg(feature = "cassandra")]
 fn e_for_opt<T: Clone>(
     stat: &mut Statement,
     data: &Option<T>,
@@ -800,4 +808,3 @@ pub struct MandateAmountData {
 pub struct MandateDetails {
     pub update_mandate_id: Option<String>,
 }
-

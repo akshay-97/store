@@ -1,6 +1,11 @@
-use crate::store::{CassClient, RedisClient};
+use crate::store::RedisClient;
 use crate::types::*;
 use anyhow::Context;
+
+#[cfg(feature = "cassandra")]
+use crate::store::CassClient;
+
+#[cfg(feature = "cassandra")]
 use cassandra_cpp::{BindRustType, LendingIterator};
 use fred::prelude::HashesInterface;
 use futures::StreamExt;
@@ -56,6 +61,7 @@ fn update_intent_cql() -> String {
         .to_string()
 }
 
+#[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentAttemptInterface for CassClient {
     async fn create_attempt(
@@ -111,6 +117,7 @@ fn retrieve_payment_cql() -> String {
     "SELECT * from payments.payment_intents WHERE payment_id = ? AND merchant_id = ?;".to_owned()
 }
 
+#[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for CassClient {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
@@ -171,11 +178,12 @@ impl PaymentIntentInterface for RedisClient {
             self.pool.hsetnx::<(), _, _, _>(
                 format!("mer_kaps_pay_{}", payment_id),
                 format!("pi_{}", payment_id),
-                serde_json::to_vec(&payment_intent)?,
+                serde_json::to_vec(&payment_intent)?.as_slice(),
             ),
             "redis_payment_intent",
             "INSERT",
-        );
+        )
+        .await?;
         Ok(())
     }
     async fn retrieve_intent<'a>(
@@ -188,7 +196,8 @@ impl PaymentIntentInterface for RedisClient {
             self.pool.hget::<(), _, _>(key, field),
             "redis_payment_intent",
             "FIND",
-        );
+        )
+        .await?;
         Ok(())
     }
 
@@ -205,12 +214,13 @@ impl PaymentIntentInterface for RedisClient {
                 format!("mer_kaps_pay_{}", payment_id),
                 (
                     format!("pi_{}", payment_id),
-                    serde_json::to_vec(&payment_intent)?,
+                    serde_json::to_vec(&payment_intent)?.as_slice(),
                 ),
             ),
             "redis_payment_intent",
             "UPDATE",
-        );
+        )
+        .await?;
         Ok(())
     }
 }
@@ -228,11 +238,12 @@ impl PaymentAttemptInterface for RedisClient {
             self.pool.hsetnx::<(), _, _, _>(
                 format!("mer_kaps_pay_{}", payment_id),
                 format!("pa_{}", payment_id),
-                serde_json::to_vec(&payment_attempt)?,
+                serde_json::to_vec(&payment_attempt)?.as_slice(),
             ),
             "redis_payment_attempt",
             "INSERT",
-        );
+        )
+        .await?;
         Ok(())
     }
 
@@ -252,7 +263,8 @@ impl PaymentAttemptInterface for RedisClient {
                 .collect::<Vec<_>>(),
             "redis_payment_attempt",
             "FIND_ALL",
-        );
+        )
+        .await;
         Ok(())
     }
     async fn update_attempt<'a>(
@@ -269,12 +281,13 @@ impl PaymentAttemptInterface for RedisClient {
                 format!("mer_kaps_pay_{}", payment_intent_id),
                 (
                     format!("pi_{}", payment_intent_id),
-                    serde_json::to_vec(&payment_attempt)?,
+                    serde_json::to_vec(&payment_attempt)?.as_slice(),
                 ),
             ),
             "redis_payment_intent",
             "UPDATE",
-        );
+        )
+        .await?;
         Ok(())
     }
 }

@@ -1,8 +1,10 @@
 use crate::models::*;
 use anyhow::Context;
-use cassandra_cpp::*;
 use fred::prelude::ClientLike;
 use std::env;
+
+#[cfg(feature = "cassandra")]
+use cassandra_cpp::*;
 
 #[async_trait::async_trait]
 pub trait Init {
@@ -45,11 +47,13 @@ impl App {
     }
 }
 
+#[cfg(feature = "cassandra")]
 #[derive(Clone)]
 pub struct CassClient {
     pub cassandra_session: Session,
 }
 
+#[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl Init for CassClient {
     async fn prepare(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -68,9 +72,11 @@ impl Init for RedisClient {
     }
 }
 
+#[cfg(feature = "cassandra")]
 impl StorageInterface for CassClient {}
 impl StorageInterface for RedisClient {}
 
+#[cfg(feature = "cassandra")]
 impl CassClient {
     pub async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>> {
         let url = env::var("CASSANDRA_URL").context("CASSANDRA_URL not found")?;
