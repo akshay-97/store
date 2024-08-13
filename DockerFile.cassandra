@@ -17,7 +17,7 @@ RUN \
 WORKDIR /app
 
 COPY . .
-RUN cargo build
+RUN cargo build --feature cassandra
 
 ARG BIN_DIR=/local/bin
 ARG BINARY=store
