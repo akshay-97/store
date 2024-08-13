@@ -18,6 +18,8 @@ cassandra-cpp = "3.0.2"
 anyhow = "1.0.86"
 axum = "0.7.5"
 dyn-clone = {version = "*"}
+fred = "9.0.3"
 async-trait = {version = "*"}
+futures = "*"
 metrics = { version = "0.22", default-features = false }
 metrics-exporter-prometheus = { version = "0.13", default-features = false }
