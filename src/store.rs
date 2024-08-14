@@ -121,10 +121,18 @@ pub struct RedisClient {
 impl RedisClient {
     pub async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>> {
         let connection_url = env::var("REDIS_CONNECTION_URL").context("REDIS URL not found")?;
+        let pool_size = env::var("REDIS_POOL_SIZE").context("REDIS POOL size not found")?;
+
         let config = fred::types::RedisConfig::from_url(&connection_url)?;
         let perf = fred::types::PerformanceConfig::default();
         let con_config = fred::types::ConnectionConfig::default();
-        let pool = fred::prelude::RedisPool::new(config, Some(perf), Some(con_config), None, 15)?;
+        let pool = fred::prelude::RedisPool::new(
+            config,
+            Some(perf),
+            Some(con_config),
+            None,
+            pool_size.parse()?,
+        )?;
 
         pool.connect();
         pool.wait_for_connect().await?;
