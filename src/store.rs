@@ -116,12 +116,16 @@ impl CassClient {
 #[derive(Clone)]
 pub struct RedisClient {
     pub pool: fred::prelude::RedisPool,
+    pub replicas: i64,
+    pub timeout: i64,
 }
 
 impl RedisClient {
     pub async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>> {
         let connection_url = env::var("REDIS_CONNECTION_URL").context("REDIS URL not found")?;
         let pool_size = env::var("REDIS_POOL_SIZE").context("REDIS POOL size not found")?;
+        let timeout = env::var("REDIS_WAIT_TIMEOUT").context("WAIT TIMEOUT not found")?;
+        let replicas = env::var("REDIS_REPLICAS").context("Replicas not found")?;
 
         let config = fred::types::RedisConfig::from_url(&connection_url)?;
         let perf = fred::types::PerformanceConfig::default();
@@ -136,7 +140,11 @@ impl RedisClient {
 
         pool.connect();
         pool.wait_for_connect().await?;
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            replicas: replicas.parse()?,
+            timeout: timeout.parse()?,
+        })
     }
 }
 // struct RedisClient{
