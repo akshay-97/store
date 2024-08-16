@@ -7,7 +7,7 @@ use crate::store::CassClient;
 
 #[cfg(feature = "cassandra")]
 use cassandra_cpp::{BindRustType, LendingIterator};
-use fred::prelude::HashesInterface;
+use fred::prelude::{HashesInterface, ServerInterface};
 use futures::StreamExt;
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
@@ -175,11 +175,20 @@ impl PaymentIntentInterface for RedisClient {
         let payment_intent = PaymentIntent::new(payment_id.clone());
 
         crate::utils::time_wrapper(
-            self.pool.hsetnx::<(), _, _, _>(
-                format!("mer_kaps_pay_{}", payment_id),
-                format!("pi_{}", payment_id),
-                serde_json::to_vec(&payment_intent)?.as_slice(),
-            ),
+            async {
+                self.pool
+                    .hsetnx::<(), _, _, _>(
+                        format!("mer_kaps_pay_{}", payment_id),
+                        format!("pi_{}", payment_id),
+                        serde_json::to_vec(&payment_intent)
+                            .unwrap_or_default()
+                            .as_slice(),
+                    )
+                    .await
+                    .map_err(|err| eprintln!("{:?}", err));
+
+                self.pool.wait(self.replicas, self.timeout).await
+            },
             "redis_payment_intent",
             "INSERT",
         )
@@ -210,13 +219,21 @@ impl PaymentIntentInterface for RedisClient {
         payment_intent.status = String::from("SUCCESS");
 
         crate::utils::time_wrapper(
-            self.pool.hset::<(), _, _>(
-                format!("mer_kaps_pay_{}", payment_id),
-                (
-                    format!("pi_{}", payment_id),
-                    serde_json::to_vec(&payment_intent)?.as_slice(),
-                ),
-            ),
+            async {
+                self.pool
+                    .hset::<(), _, _>(
+                        format!("mer_kaps_pay_{}", payment_id),
+                        (
+                            format!("pi_{}", payment_id),
+                            serde_json::to_vec(&payment_intent)
+                                .unwrap_or_default()
+                                .as_slice(),
+                        ),
+                    )
+                    .await
+                    .map_err(|err| eprintln!("{:?}", err));
+                self.pool.wait(self.replicas, self.timeout).await
+            },
             "redis_payment_intent",
             "UPDATE",
         )
@@ -235,11 +252,19 @@ impl PaymentAttemptInterface for RedisClient {
         let payment_attempt = PaymentAttempt::new(payment_id.clone(), version);
 
         crate::utils::time_wrapper(
-            self.pool.hsetnx::<(), _, _, _>(
-                format!("mer_kaps_pay_{}", payment_id),
-                format!("pa_{}", payment_id),
-                serde_json::to_vec(&payment_attempt)?.as_slice(),
-            ),
+            async {
+                self.pool
+                    .hsetnx::<(), _, _, _>(
+                        format!("mer_kaps_pay_{}", payment_id),
+                        format!("pa_{}", payment_id),
+                        serde_json::to_vec(&payment_attempt)
+                            .unwrap_or_default()
+                            .as_slice(),
+                    )
+                    .await
+                    .map_err(|err| eprintln!("{:?}", err));
+                self.pool.wait(self.replicas, self.timeout).await
+            },
             "redis_payment_attempt",
             "INSERT",
         )
@@ -277,13 +302,21 @@ impl PaymentAttemptInterface for RedisClient {
         payment_attempt.status = AttemptStatus::Charged;
 
         crate::utils::time_wrapper(
-            self.pool.hset::<(), _, _>(
-                format!("mer_kaps_pay_{}", payment_intent_id),
-                (
-                    format!("pi_{}", payment_intent_id),
-                    serde_json::to_vec(&payment_attempt)?.as_slice(),
-                ),
-            ),
+            async {
+                self.pool
+                    .hset::<(), _, _>(
+                        format!("mer_kaps_pay_{}", payment_intent_id),
+                        (
+                            format!("pi_{}", payment_intent_id),
+                            serde_json::to_vec(&payment_attempt)
+                                .unwrap_or_default()
+                                .as_slice(),
+                        ),
+                    )
+                    .await
+                    .map_err(|err| eprintln!("{:?}", err));
+                self.pool.wait(self.replicas, self.timeout).await
+            },
             "redis_payment_intent",
             "UPDATE",
         )
