@@ -24,3 +24,9 @@ async-trait = {version = "*"}
 futures = "*"
 metrics = { version = "0.22", default-features = false }
 metrics-exporter-prometheus = { version = "0.13", default-features = false }
+
+[profile.release]
+strip = false
+lto = true
+codegen-units = 1
+debug = 1
