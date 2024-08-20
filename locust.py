@@ -10,7 +10,7 @@ config_set = {
 
 class PaymentsBehaviour(SequentialTaskSet):
     payment_id = None
-    attempt_version = [None] * 10
+    attempt_version = [None] * 1
     
     def gen(self):
         config_set['version'] += 1
@@ -22,7 +22,7 @@ class PaymentsBehaviour(SequentialTaskSet):
         response = self.client.get('/create/' + self.payment_id, name = "IntentCreate")
     @task(1)
     def pay(self):
-        for i in range(10):
+        for i in range(1):
             self.attempt_version[i] = self.payment_id + 'version' + str(i)
             response = self.client.get('/pay/' + self.payment_id + '/' + self.attempt_version[i], name = "AttemptCreate")
     @task(1)
@@ -35,9 +35,9 @@ class PaymentsBehaviour(SequentialTaskSet):
     def update_intent(self):
         response = self.client.get('/update_intent/' + self.payment_id, name = "UpdateIntent")
     
-    @task(1)
-    def retrieve_attempt(self):
-        response = self.client.get('/retrieve/payment_attempt/' + self.payment_id, name = "RetrieveAllAttempt")
+    # @task(1)
+    # def retrieve_attempt(self):
+    #     response = self.client.get('/retrieve/payment_attempt/' + self.payment_id, name = "RetrieveAllAttempt")
     
     @task(1)
     def retrieve_intent(self):
