@@ -86,6 +86,7 @@ impl CassClient {
             .unwrap_or(9042);
         let password = env::var("CASSANDRA_PASSWORD").context("CASSANDRA_PASSWORD not found")?;
         let username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
+        let datacenter = env::var("CASSANDRA_DC").context("datacenter not configured")?;
         set_level(LogLevel::DEBUG);
         let mut cluster = Cluster::default();
         cluster
@@ -93,6 +94,8 @@ impl CassClient {
             .set_port(port)?
             .set_credentials(&username, &password)?
             .set_load_balance_round_robin();
+        
+        cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
         let session = cluster.connect().await?;
         Ok(Self {
