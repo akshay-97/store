@@ -70,9 +70,10 @@ impl PaymentAttemptInterface for CassClient {
         version: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut statement = self.cassandra_session.statement(insert_attempt_cql());
-        let _= statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        PaymentAttempt::new(payment_id,version).populate_statement(&mut statement)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
+        let _ = statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
+        PaymentAttempt::new(payment_id, version).populate_statement(&mut statement)?;
+        let _rows =
+            crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
         Ok(())
     }
 
@@ -87,7 +88,8 @@ impl PaymentAttemptInterface for CassClient {
         statement.bind(0, payment_id)?;
         statement.bind(1, "kaps")?;
         statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
-        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND_ALL").await?;
+        let rows =
+            crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND_ALL").await?;
         //let mut rows = rows.iter();
 
         let _ = rows.iter().next().context("No rows found")?;
@@ -104,7 +106,8 @@ impl PaymentAttemptInterface for CassClient {
         statement.bind(2, "kaps")?;
         statement.bind(3, version.as_str())?;
         statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
+        let _rows =
+            crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
         Ok(())
     }
 }
@@ -124,7 +127,8 @@ impl PaymentIntentInterface for CassClient {
 
         //println!("what is statement {:?} ", statement);
         statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE").await
+        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE")
+            .await
             .map_err(|e| {
                 println!("intent create error {}", e.to_string());
                 e
@@ -141,8 +145,9 @@ impl PaymentIntentInterface for CassClient {
         statement.bind(0, payment_id)?;
         statement.bind(1, "kaps")?;
         statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
-    
-        let rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "FIND").await?;
+
+        let rows =
+            crate::utils::time_wrapper(statement.execute(), "payment_intent", "FIND").await?;
         let _row = rows.iter().next().context("No rows found")?;
         //TODO : deserialize
         Ok(())
@@ -157,7 +162,7 @@ impl PaymentIntentInterface for CassClient {
         statement.bind(0, "SUCCESS")?;
         statement.bind(1, payment_intent_id)?;
 
-        statement.bind(2,"kaps")?;
+        statement.bind(2, "kaps")?;
         statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
 
         let _rows =
@@ -170,10 +175,10 @@ impl PaymentIntentInterface for CassClient {
 impl PaymentIntentInterface for RedisClient {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
         let payment_intent = PaymentIntent::new(payment_id.clone());
-
+        let client = self.pool.next();
         crate::utils::time_wrapper(
             async {
-                self.pool
+                client
                     .hsetnx::<(), _, _, _>(
                         format!("mer_kaps_pay_{}", payment_id),
                         format!("pi_{}", payment_id),
@@ -198,8 +203,10 @@ impl PaymentIntentInterface for RedisClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let key = format!("mer_kaps_pay_{}", payment_id);
         let field = format!("pi_{}", payment_id);
+
+        let client = self.pool.next();
         crate::utils::time_wrapper(
-            self.pool.hget::<(), _, _>(key, field),
+            client.hget::<(), _, _>(key, field),
             "redis_payment_intent",
             "FIND",
         )
@@ -215,9 +222,10 @@ impl PaymentIntentInterface for RedisClient {
 
         payment_intent.status = String::from("SUCCESS");
 
+        let client = self.pool.next();
         crate::utils::time_wrapper(
             async {
-                self.pool
+                client
                     .hset::<(), _, _>(
                         format!("mer_kaps_pay_{}", payment_id),
                         (
@@ -248,9 +256,10 @@ impl PaymentAttemptInterface for RedisClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let payment_attempt = PaymentAttempt::new(payment_id.clone(), version);
 
+        let client = self.pool.next();
         crate::utils::time_wrapper(
             async {
-                self.pool
+                client
                     .hsetnx::<(), _, _, _>(
                         format!("mer_kaps_pay_{}", payment_id),
                         format!("pa_{}", payment_id),
@@ -273,9 +282,9 @@ impl PaymentAttemptInterface for RedisClient {
         &self,
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let client = self.pool.next();
         crate::utils::time_wrapper(
-            self.pool
-                .next()
+            client
                 .hscan::<&str, &str>(
                     format!("mer_kaps_pay_{}", payment_id).as_str(),
                     "pa_*",
@@ -298,9 +307,10 @@ impl PaymentAttemptInterface for RedisClient {
 
         payment_attempt.status = AttemptStatus::Charged;
 
+        let client = self.pool.next();
         crate::utils::time_wrapper(
             async {
-                self.pool
+                client
                     .hset::<(), _, _>(
                         format!("mer_kaps_pay_{}", payment_intent_id),
                         (
