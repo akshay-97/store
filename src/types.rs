@@ -1,5 +1,8 @@
+use charybdis::scylla::{CqlValue, FromCqlVal};
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
+use charybdis::macros::charybdis_model;
+use charybdis::types::{Text, Time, Timestamp};
 
 #[derive(Serialize, Deserialize)]
 pub struct PaymentAttempt {
@@ -807,4 +810,76 @@ pub struct MandateAmountData {
 #[derive(Serialize, Deserialize)]
 pub struct MandateDetails {
     pub update_mandate_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[charybdis_model(
+    table_name = merchant_accounts,
+    partition_keys = [merchant_id],
+    clustering_keys = [],
+    global_secondary_indexes = [],
+    local_secondary_indexes = [],
+    static_columns = []
+)]
+pub struct MerchantAccount {
+    pub merchant_id: String,
+    pub return_url: Option<String>,
+    pub enable_payment_response_hash: bool,
+    pub payment_response_hash_key: Option<String>,
+    pub redirect_to_merchant_with_http_post: bool,
+    pub merchant_name: Option<String>,
+    pub merchant_details: Option<String>,
+    pub webhook_details: Option<String>,
+    pub sub_merchants_enabled: Option<bool>,
+    pub parent_merchant_id: Option<String>,
+    pub publishable_key: Option<String>,
+    pub storage_scheme: String,
+    pub locker_id: Option<String>,
+    pub metadata: Option<String>,
+    pub routing_algorithm: Option<String>,
+    pub primary_business_details: String,
+    pub intent_fulfillment_time: Option<i64>,
+    pub created_at: Timestamp,
+    pub modified_at: Timestamp,
+    pub frm_routing_algorithm: Option<String>,
+    pub payout_routing_algorithm: Option<String>,
+    pub organization_id: String,
+    pub is_recon_enabled: bool,
+    pub default_profile: Option<String>,
+    pub recon_status: String,
+    pub payment_link_config: Option<String>,
+    pub pm_collect_link_config: Option<String>,
+}
+
+impl MerchantAccount {
+    pub fn new(merchant_id : String) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self { merchant_id,
+            return_url: Some("www.google.co.in".into()),
+            enable_payment_response_hash: false,
+            payment_response_hash_key: Some("hash".into()),
+            redirect_to_merchant_with_http_post: true,
+            merchant_name: Some("kaps".into()),
+            merchant_details: None,
+            webhook_details: Some("callback_url".into()),
+            sub_merchants_enabled: None,
+            parent_merchant_id: None,
+            publishable_key: Some("AAAAB3NzaC1yc2EAAAADAQABAAACAQC+gCy875BbJDjy/KDczr84xswL1edCE82IkOCBeYuOPbmhR251K9r7UFjlXioa5UnMpRals/pMSkz9MF7yUTzPDg+NjfmsZ8rgHqTKJ7z/yUWEyxd3TcUh0xkkYMCfrA+9rLqgolBiasAOApBDYTi0BsBlfAgNIaTgg7xTX7PHUzceAvujJel1Q6V+bABnFvlDu6kWUhXlrPafWRPUSQz2wEsO7vqrE9UfP+CtuXrJ+t6pMbkVDGc0+JWaPJjBXMjxljBfZHw7UVbHmPlYYTwOGD/IWOgisFfvnutR4JvDZA5elWqkXj+ZEsOw4QFXw71o+b2YWrRBa8l+AFn//zPQvLB753wQVuhzmsidToLss2DfGLdrYKVuCTX7a7OhxKDYRYeyZgeqWK8xVqiyayXgvuxcZV2g+mHi2WuUGGJ6Ycj+JZ9Vh67EnplDmJAKCFXCenS4ou9rMCHqD6i9UVgzakzxy/wd5Cj6R26uKqKo8rZDw9D6zKDzF45NbVh+obAFh/9MuzSCaaL5pXWPUI0kI7iZ8lU7rC8HAj5HhynLZd+rfQazVo+qcoQMxO+A9+fFubru41Aku6siQgv6oXNiGSOcb4bgEDlCBQ/uQgNCn9Vdq3f1yWqC1eAQtwoB4YTE2DZrY1TVZiN202JQNweIIOQUANyKRVV2ITZketmeZQ==".into()),
+            storage_scheme: "cassandra".into(),
+            locker_id: None,
+            metadata: None,
+            routing_algorithm: Some(serde_json::to_string(&get_large_value())?.into()),
+            primary_business_details: serde_json::to_string(&get_large_value())?.into(),
+            intent_fulfillment_time: None,
+            created_at: chrono::DateTime::default(),
+            modified_at: chrono::DateTime::default(),
+            frm_routing_algorithm: Some(serde_json::to_string(&get_large_value())?.into()),
+            payout_routing_algorithm: Some(serde_json::to_string(&get_large_value())?.into()),
+            organization_id: "kaps".into(),
+            is_recon_enabled: false,
+            default_profile: None,
+            recon_status: "NONE".into(),
+            payment_link_config: Some("link_config".into()),
+            pm_collect_link_config: None
+        })
+    }
 }

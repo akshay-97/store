@@ -38,6 +38,19 @@ pub trait PaymentAttemptInterface {
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
+#[async_trait::async_trait]
+pub trait MerchantAccountInterface {
+    async fn create_account(
+        &self,
+        merchant_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn retrieve_account<'a>(
+        &self,
+        merchant_id : &'a str,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+}
+
 fn insert_intent_cql() -> String {
     "INSERT INTO payments.payment_intents (payment_id, merchant_id, status, amount, currency, amount_captured, customer_id, description, return_url, metadata, connector_id, shipping_address_id, billing_address_id, statement_descriptor_name, statement_descriptor_suffix, created_at, modified_at, last_synced, setup_future_usage, off_session, client_secret, active_attempt_id, business_country, business_label, order_details, allowed_payment_method_types, connector_metadata, feature_metadata, attempt_count, profile_id, merchant_decision, payment_link_id, payment_confirm_source, updated_by, surcharge_applicable, request_incremental_authorization, incremental_authorization_allowed, authorization_count, session_expiry, fingerprint_id, request_external_three_ds_authentication, charges, frm_metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);" 
         .to_owned()
@@ -60,6 +73,7 @@ fn update_intent_cql() -> String {
     "UPDATE payments.payment_intents set status = ? WHERE payment_id = ? AND merchant_id = ?;"
         .to_string()
 }
+
 
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]

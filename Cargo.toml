@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = []
+default = ["cassandra"]
 cassandra = ["dep:cassandra-cpp"]
 redis = []
 
@@ -24,6 +24,9 @@ async-trait = {version = "*"}
 futures = "*"
 metrics = { version = "0.22", default-features = false }
 metrics-exporter-prometheus = { version = "0.13", default-features = false }
+charybdis = {version = "*"}
+scylla = { version = "0.13.1", features = ["full-serialization"] }
+chrono = {version = "*"}
 
 [profile.release]
 strip = false
