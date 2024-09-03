@@ -8,7 +8,7 @@ use crate::store::CassClient;
 #[cfg(feature = "cassandra")]
 use cassandra_cpp::{BindRustType, LendingIterator};
 use fred::prelude::{HashesInterface, ServerInterface};
-use futures::StreamExt;
+use futures::{lock, StreamExt};
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>>;
@@ -45,9 +45,9 @@ pub trait MerchantAccountInterface {
         merchant_id : String,
     ) -> Result<(), Box<dyn std::error::Error>>;
 
-    async fn retrieve_account<'a>(
+    async fn retrieve_account(
         &self,
-        merchant_id : &'a str,
+        merchant_id : String,
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
@@ -74,6 +74,24 @@ fn update_intent_cql() -> String {
         .to_string()
 }
 
+#[cfg(feature = "cassandra")]
+use charybdis::operations::Insert;
+use charybdis::options::Consistency;
+#[async_trait::async_trait]
+impl MerchantAccountInterface for CassClient {
+    async fn create_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
+        let account = MerchantAccount::new(merchant_id)?;
+        let query = account.insert().consistency(Consistency::EachQuorum);
+        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "CREATE").await?;
+        Ok(())
+    }
+
+    async fn retrieve_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
+        let query = MerchantAccount::find_by_merchant_id(merchant_id).consistency(Consistency::EachQuorum);
+        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "FIND").await?;
+        Ok(())
+    }
+}
 
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]

@@ -883,3 +883,34 @@ impl MerchantAccount {
         })
     }
 }
+
+#[derive(Serialize, Deserialize)]
+#[charybdis_model(
+    table_name = customers,
+    partition_keys = [customer_id],
+    clustering_keys = [],
+    global_secondary_indexes = [],
+    local_secondary_indexes = [],
+    static_columns = []
+)]
+pub struct Customer {
+    pub id: i32,
+    pub customer_id: String,
+    pub merchant_id: String,
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub phone_country_code: Option<String>,
+    pub description: Option<String>,
+    pub created_at: Timestamp,
+    pub metadata: Option<String>,
+    pub connector_customer: Option<String>,
+    pub modified_at: Timestamp,
+    pub address_id: Option<String>,
+    pub default_payment_method_id: Option<String>,
+    pub updated_by: Option<String>,
+}
+
+// impl Customer{
+//     pub fn new(customer_id : String) -> Result<(), Box>
+// }

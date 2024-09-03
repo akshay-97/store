@@ -1,6 +1,7 @@
 use crate::models::*;
 use anyhow::Context;
 use fred::prelude::ClientLike;
+use scylla::CachingSession;
 use std::env;
 
 #[cfg(feature = "cassandra")]
@@ -48,9 +49,16 @@ impl App {
 }
 
 #[cfg(feature = "cassandra")]
-#[derive(Clone)]
+use std::sync::Arc;
 pub struct CassClient {
     pub cassandra_session: Session,
+    pub account_session: Arc<scylla::CachingSession>,
+}
+
+impl Clone for CassClient{
+    fn clone(&self) -> Self {
+        Self { cassandra_session: self.cassandra_session.clone(), account_session: Arc::clone(&self.account_session) }
+    }
 }
 
 #[cfg(feature = "cassandra")]
@@ -98,8 +106,16 @@ impl CassClient {
         cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
         let session = cluster.connect().await?;
+
+        let scylla_session = scylla::SessionBuilder::new()
+            .known_node(url)
+            .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
+            .build()
+            .await?;
+        let caching_session: CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(scylla_session, 1024usize);
         Ok(Self {
             cassandra_session: session,
+            account_session: Arc::new(caching_session),
         })
     }
 
