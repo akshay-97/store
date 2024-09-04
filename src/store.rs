@@ -108,9 +108,9 @@ impl CassClient {
         cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
         let session = cluster.connect().await?;
-
+        let scylla_url : Vec<String>= url.split(',').map(|ip| format!("{}:{}", ip, port)).collect();
         let scylla_session = scylla::SessionBuilder::new()
-            .known_node(url)
+            .known_nodes(scylla_url)
             .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
             .build()
             .await?;

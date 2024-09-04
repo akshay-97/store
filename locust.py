@@ -22,7 +22,7 @@ class PaymentsBehaviour(SequentialTaskSet):
         payment_id = self.gen()
         self.payment_id = payment_id
         f1.write(self.payment_id)
-        response = self.client.get('/create/' + self.payment_id, name = "IntentCreate")
+        response = self.client.get('/create/' + self.payment_id + '/' + 'kaps', name = "IntentCreate")
     @task(1)
     def pay(self):
         for i in range(1):
