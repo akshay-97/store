@@ -50,10 +50,12 @@ async fn start_app(){
 
     let router = axum::Router::new()
         .route("/init_db", get(init_db))
-        .route("/create/:payment_id", get(create_payment)) // create payment intent
+        .route("/create/account/:merchant_id", get(create_account))
+        .route("/create/:payment_id/:merchant_id", get(create_payment)) // create payment intent
         .route("/pay/:payment_id/:version", get(pay))// create payment attempt
         .route("/update_intent/:payment_intent_id", get(update_intent))
         .route("/update_attempt/pay/:version/:payment_attempt_id", get(update_attempt))
+        .route("/retrieve_by_id/payment_attempt/:payment_attempt_id/:payment_id", get(retrieve_by_id))
         .route("/retrieve/payment_attempt/:payment_id", get(retrieve_attempt))
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
         .with_state(store)
@@ -74,7 +76,13 @@ async fn init_db(State(app) : State<App>) -> Result<impl IntoResponse, String>{
     let _ = app.db.prepare().await.map_err(|_| "init failed")?;
     Ok(axum::Json(()))
 }
-async fn create_payment(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
+async fn create_account(State(app) : State<App>, Path(merchant_id): Path<String>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.create_account(merchant_id).await.map_err(|e| e.to_string())?;
+    Ok(axum::Json(()))
+}
+
+async fn create_payment(State(app) : State<App> , Path((payment_id, merchant_id)): Path<(String, String)>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.retrieve_account(merchant_id).await.map_err(|e| e.to_string())?;
     let _ = app.db.create_intent(payment_id).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
@@ -95,6 +103,11 @@ async fn update_intent(State(app) : State<App> , Path(payment_intent_id): Path<S
 }
 async fn retrieve_attempt(State(app) : State<App> , Path(payment_id): Path<String>) -> Result<impl IntoResponse , String>{
     let _ = app.db.retrieve_all(payment_id.as_ref()).await.map_err(|e| e.to_string())?;
+    Ok(axum::Json(()))
+}
+
+async fn retrieve_by_id(State(app): State<App>, Path((payment_attempt_id, payment_id)) : Path<(String, String)>) -> Result<impl IntoResponse , String>{
+    let _ = app.db.retrieve_by_id(payment_attempt_id, payment_id).await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
 

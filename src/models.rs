@@ -36,6 +36,12 @@ pub trait PaymentAttemptInterface {
         payment_id: &'a str,
         version: String,
     ) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn retrieve_by_id(
+        &self,
+        payment_attempt_id : String,
+        payment_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[async_trait::async_trait]
@@ -72,6 +78,10 @@ fn update_attempt_cql() -> String {
 fn update_intent_cql() -> String {
     "UPDATE payments.payment_intents set status = ? WHERE payment_id = ? AND merchant_id = ?;"
         .to_string()
+}
+
+fn retrieve_by_id() -> String{
+    "SELECT * from payments.payment_attempts WHERE payment_id = ? AND merchant_id = ? AND payment_attempt_id = ?;".to_string()
 }
 
 #[cfg(feature = "cassandra")]
@@ -139,6 +149,23 @@ impl PaymentAttemptInterface for CassClient {
         let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
         Ok(())
     }
+
+    async fn retrieve_by_id(
+        &self,
+        payment_attempt_id : String,
+        payment_id : String
+    ) -> Result<(), Box<dyn std::error::Error>>{
+        let mut statement = self.cassandra_session.statement(retrieve_by_id());
+        statement.bind(0, payment_id.as_str())?;
+        statement.bind(1, "kaps")?;
+        statement.bind(2, payment_attempt_id.as_str())?;
+        statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
+        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND").await?;
+        if rows.row_count()  == 0u64 {
+            return Err("no rows found".into())
+        }
+        Ok(())
+    }
 }
 
 //TODO: convert to generated statements
@@ -175,7 +202,9 @@ impl PaymentIntentInterface for CassClient {
         statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
     
         let rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "FIND").await?;
-        let _row = rows.iter().next().context("No rows found")?;
+        if rows.row_count() == 0u64 {
+            return Err("no record found".into())
+        }
         //TODO : deserialize
         Ok(())
     }
@@ -350,6 +379,9 @@ impl PaymentAttemptInterface for RedisClient {
             "UPDATE",
         )
         .await?;
+        Ok(())
+    }
+    async fn retrieve_by_id(&self, _ : String, _ : String) -> Result<(), Box<dyn std::error::Error>>{
         Ok(())
     }
 }

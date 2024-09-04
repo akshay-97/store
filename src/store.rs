@@ -17,6 +17,7 @@ pub trait StorageInterface:
     dyn_clone::DynClone
     + PaymentIntentInterface
     + PaymentAttemptInterface
+    + MerchantAccountInterface
     + Send
     + Sync
     + 'static
@@ -82,6 +83,7 @@ impl Init for RedisClient {
 
 #[cfg(feature = "cassandra")]
 impl StorageInterface for CassClient {}
+#[cfg(feature = "redis")]
 impl StorageInterface for RedisClient {}
 
 #[cfg(feature = "cassandra")]

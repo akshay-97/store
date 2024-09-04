@@ -144,7 +144,7 @@ impl PaymentAttempt {
         Self {
             payment_id: i.clone(),
             merchant_id: "kaps".to_owned(),
-            attempt_id: format!("attempt_{}_{}", &i, version),
+            attempt_id: version,
             status: AttemptStatus::AuthenticationFailed,
             amount: i64::MAX,
             currency: Some(Currency::USD),
