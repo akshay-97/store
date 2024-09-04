@@ -7,9 +7,9 @@ config_set = {
    'base' : uuid.uuid4().hex
 }
 
-f1 = file.open('intent.out', 'a')
-f2 = file.open('attempt.out', 'a')
-`
+f1 = open('intent.out', 'a')
+f2 = open('attempt.out', 'a')
+
 class PaymentsBehaviour(SequentialTaskSet):
     payment_id = None
     attempt_version = [None] * 1
@@ -22,7 +22,7 @@ class PaymentsBehaviour(SequentialTaskSet):
         payment_id = self.gen()
         self.payment_id = payment_id
         f1.write(self.payment_id)
-        response = self.client.get('/create/' + self.payment_id + '/' + 'kaps', name = "IntentCreate")
+        response = self.client.get('/create/' + self.payment_id + '/elf', name = "IntentCreate")
     @task(1)
     def pay(self):
         for i in range(1):

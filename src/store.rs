@@ -108,10 +108,12 @@ impl CassClient {
         cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
         let session = cluster.connect().await?;
+        let acc_keyspace = env::var("ACC_KEYSPACE").context("accounts keyspace not found")?;
         let scylla_url : Vec<String>= url.split(',').map(|ip| format!("{}:{}", ip, port)).collect();
         let scylla_session = scylla::SessionBuilder::new()
             .known_nodes(scylla_url)
             .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
+            .use_keyspace(acc_keyspace, false)
             .build()
             .await?;
         let caching_session: CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(scylla_session, 1024usize);
