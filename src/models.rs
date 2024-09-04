@@ -97,7 +97,7 @@ impl MerchantAccountInterface for CassClient {
     }
 
     async fn retrieve_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
-        let query = MerchantAccount::find_by_merchant_id(merchant_id).consistency(Consistency::EachQuorum);
+        let query = MerchantAccount::find_by_merchant_id(merchant_id).consistency(Consistency::LocalQuorum);
         let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "FIND").await?;
         Ok(())
     }
