@@ -3,7 +3,8 @@ use anyhow::Context;
 use fred::prelude::ClientLike;
 use scylla::CachingSession;
 use std::env;
-
+use openssl::ssl::{SslContextBuilder, SslVerifyMode, SslMethod, SslFiletype};
+use std::path::PathBuf;
 #[cfg(feature = "cassandra")]
 use cassandra_cpp::*;
 
@@ -108,10 +109,19 @@ impl CassClient {
         cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
         let session = cluster.connect().await?;
+        let cert_url = env::var("CASS_CERT_URL").context("CASSANDRA CERT URL NOT FOUND")?;
         let acc_keyspace = env::var("ACC_KEYSPACE").context("accounts keyspace not found")?;
         let scylla_url : Vec<String>= url.split(',').map(|ip| format!("{}:{}", ip, port)).collect();
+
+        let certdir = tokio::fs::canonicalize(PathBuf::from(cert_url)).await?;
+        let mut context_builder = SslContextBuilder::new(SslMethod::tls())?;
+        context_builder.set_certificate_file(certdir.as_path(), SslFiletype::PEM)?;
+        context_builder.set_verify(SslVerifyMode::NONE);
+
+
         let scylla_session = scylla::SessionBuilder::new()
             .known_nodes(scylla_url)
+            .ssl_context(Some(context_builder.build()))
             .user(username, password)
             .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
             .use_keyspace(acc_keyspace, false)

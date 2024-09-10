@@ -25,8 +25,9 @@ futures = "*"
 metrics = { version = "0.22", default-features = false }
 metrics-exporter-prometheus = { version = "0.13", default-features = false }
 charybdis = {version = "*"}
-scylla = { version = "0.13.1", features = ["full-serialization"] }
+scylla = { version = "0.13.1", features = ["full-serialization", "ssl"] }
 chrono = {version = "*"}
+openssl = {version = "*"}
 
 [profile.release]
 strip = false
