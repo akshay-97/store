@@ -52,13 +52,13 @@ impl App {
 #[cfg(feature = "cassandra")]
 use std::sync::Arc;
 pub struct CassClient {
-    pub cassandra_session: Session,
+    //pub cassandra_session: Session,
     pub account_session: Arc<scylla::CachingSession>,
 }
 
 impl Clone for CassClient{
     fn clone(&self) -> Self {
-        Self { cassandra_session: self.cassandra_session.clone(), account_session: Arc::clone(&self.account_session) }
+        Self {  account_session: Arc::clone(&self.account_session) }
     }
 }
 
@@ -66,10 +66,10 @@ impl Clone for CassClient{
 #[async_trait::async_trait]
 impl Init for CassClient {
     async fn prepare(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
-        let _ = self
-            .cassandra_session
-            .execute(include_str!("schema.cql"))
-            .await?;
+        // let _ = self
+        //     .cassandra_session
+        //     .execute(include_str!("schema.cql"))
+        //     .await?;
         Ok(())
     }
 }
@@ -112,13 +112,14 @@ impl CassClient {
         let scylla_url : Vec<String>= url.split(',').map(|ip| format!("{}:{}", ip, port)).collect();
         let scylla_session = scylla::SessionBuilder::new()
             .known_nodes(scylla_url)
+            .user(username, password)
             .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
             .use_keyspace(acc_keyspace, false)
             .build()
             .await?;
         let caching_session: CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(scylla_session, 1024usize);
         Ok(Self {
-            cassandra_session: session,
+            //cassandra_session: session,
             account_session: Arc::new(caching_session),
         })
     }

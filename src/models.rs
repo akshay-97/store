@@ -81,7 +81,7 @@ fn update_intent_cql() -> String {
 }
 
 fn retrieve_by_id() -> String{
-    "SELECT * from payments.payment_attempts WHERE payment_id = ? AND merchant_id = ? AND payment_attempt_id = ?;".to_string()
+    "SELECT * from payments.payment_attempts WHERE payment_id = ? AND merchant_id = ? AND attempt_id = ?;".to_string()
 }
 
 #[cfg(feature = "cassandra")]
@@ -111,10 +111,10 @@ impl PaymentAttemptInterface for CassClient {
         payment_id: String,
         version: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut statement = self.cassandra_session.statement(insert_attempt_cql());
-        let _= statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        PaymentAttempt::new(payment_id,version).populate_statement(&mut statement)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
+        // let mut statement = self.cassandra_session.statement(insert_attempt_cql());
+        // let _= statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
+        // PaymentAttempt::new(payment_id,version).populate_statement(&mut statement)?;
+        // let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
         Ok(())
     }
 
@@ -122,17 +122,17 @@ impl PaymentAttemptInterface for CassClient {
         &self,
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut statement = self
-            .cassandra_session
-            .statement(select_payment_attempt_all());
+        // let mut statement = self
+        //     .cassandra_session
+        //     .statement(select_payment_attempt_all());
 
-        statement.bind(0, payment_id)?;
-        statement.bind(1, "kaps")?;
-        statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
-        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND_ALL").await?;
-        //let mut rows = rows.iter();
+        // statement.bind(0, payment_id)?;
+        // statement.bind(1, "kaps")?;
+        // statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
+        // let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND_ALL").await?;
+        // //let mut rows = rows.iter();
 
-        let _ = rows.iter().next().context("No rows found")?;
+        // let _ = rows.iter().next().context("No rows found")?;
         Ok(())
     }
     async fn update_attempt<'a>(
@@ -140,13 +140,13 @@ impl PaymentAttemptInterface for CassClient {
         payment_intent_id: &'a str,
         version: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut statement = self.cassandra_session.statement(update_attempt_cql());
-        for_opt(&mut statement, &Some(get_large_value()), 0)?;
-        statement.bind(1, payment_intent_id)?;
-        statement.bind(2, "kaps")?;
-        statement.bind(3, version.as_str())?;
-        statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
+        // let mut statement = self.cassandra_session.statement(update_attempt_cql());
+        // for_opt(&mut statement, &Some(get_large_value()), 0)?;
+        // statement.bind(1, payment_intent_id)?;
+        // statement.bind(2, "kaps")?;
+        // statement.bind(3, version.as_str())?;
+        // statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
+        // let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
         Ok(())
     }
 
@@ -155,15 +155,15 @@ impl PaymentAttemptInterface for CassClient {
         payment_attempt_id : String,
         payment_id : String
     ) -> Result<(), Box<dyn std::error::Error>>{
-        let mut statement = self.cassandra_session.statement(retrieve_by_id());
-        statement.bind(0, payment_id.as_str())?;
-        statement.bind(1, "kaps")?;
-        statement.bind(2, payment_attempt_id.as_str())?;
-        statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
-        let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND").await?;
-        if rows.row_count()  == 0u64 {
-            return Err("no rows found".into())
-        }
+        // let mut statement = self.cassandra_session.statement(retrieve_by_id());
+        // statement.bind(0, payment_id.as_str())?;
+        // statement.bind(1, "kaps")?;
+        // statement.bind(2, payment_attempt_id.as_str())?;
+        // statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
+        // let rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "FIND").await?;
+        // if rows.row_count()  == 0u64 {
+        //     return Err("no rows found".into())
+        // }
         Ok(())
     }
 }
@@ -177,17 +177,17 @@ fn retrieve_payment_cql() -> String {
 #[async_trait::async_trait]
 impl PaymentIntentInterface for CassClient {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
-        let mut statement = self.cassandra_session.statement(insert_intent_cql());
+        // let mut statement = self.cassandra_session.statement(insert_intent_cql());
 
-        PaymentIntent::new(payment_id).populate_statement(&mut statement)?;
+        // PaymentIntent::new(payment_id).populate_statement(&mut statement)?;
 
-        //println!("what is statement {:?} ", statement);
-        statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE").await
-            .map_err(|e| {
-                println!("intent create error {}", e.to_string());
-                e
-            })?;
+        // //println!("what is statement {:?} ", statement);
+        // statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
+        // let _rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "CREATE").await
+        //     .map_err(|e| {
+        //         println!("intent create error {}", e.to_string());
+        //         e
+        //     })?;
         Ok(())
     }
 
@@ -195,16 +195,16 @@ impl PaymentIntentInterface for CassClient {
         &self,
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut statement = self.cassandra_session.statement(retrieve_payment_cql());
+        // let mut statement = self.cassandra_session.statement(retrieve_payment_cql());
 
-        statement.bind(0, payment_id)?;
-        statement.bind(1, "kaps")?;
-        statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
+        // statement.bind(0, payment_id)?;
+        // statement.bind(1, "kaps")?;
+        // statement.set_consistency(cassandra_cpp::Consistency::LOCAL_QUORUM)?;
     
-        let rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "FIND").await?;
-        if rows.row_count() == 0u64 {
-            return Err("no record found".into())
-        }
+        // let rows = crate::utils::time_wrapper(statement.execute(), "payment_intent", "FIND").await?;
+        // if rows.row_count() == 0u64 {
+        //     return Err("no record found".into())
+        // }
         //TODO : deserialize
         Ok(())
     }
@@ -213,16 +213,16 @@ impl PaymentIntentInterface for CassClient {
         &self,
         payment_intent_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut statement = self.cassandra_session.statement(update_intent_cql());
+        // let mut statement = self.cassandra_session.statement(update_intent_cql());
 
-        statement.bind(0, "SUCCESS")?;
-        statement.bind(1, payment_intent_id)?;
+        // statement.bind(0, "SUCCESS")?;
+        // statement.bind(1, payment_intent_id)?;
 
-        statement.bind(2,"kaps")?;
-        statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
+        // statement.bind(2,"kaps")?;
+        // statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
 
-        let _rows =
-            crate::utils::time_wrapper(statement.execute(), "payment_intent", "UPDATE").await?;
+        // let _rows =
+        //     crate::utils::time_wrapper(statement.execute(), "payment_intent", "UPDATE").await?;
         Ok(())
     }
 }

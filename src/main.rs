@@ -125,6 +125,7 @@ struct DB_ERR(String);
 impl IntoResponse for DB_ERR
 {
     fn into_response(self) -> axum::response::Response {
+        println!("servers error is : {}", self.0);
         (StatusCode::INTERNAL_SERVER_ERROR, self.0).into_response()
     }
 } 
