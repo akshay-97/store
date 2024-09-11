@@ -136,15 +136,8 @@ impl PaymentAttemptInterface for CassClient {
         payment_intent_id: &'a str,
         version: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
-       
-        //let query = PaymentAttempt::update(&self)
-        // let mut statement = self.cassandra_session.statement(update_attempt_cql());
-        // for_opt(&mut statement, &Some(get_large_value()), 0)?;
-        // statement.bind(1, payment_intent_id)?;
-        // statement.bind(2, "kaps")?;
-        // statement.bind(3, version.as_str())?;
-        // statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        // let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "UPDATE").await?;
+        let update = UpdateMetadataPaymentAttempt {merchant_id : "kaps".to_string(), payment_id : payment_intent_id.to_owned(), attempt_id : version, connector_metadata : Some("AAAAB3NzaC1yc2EAAAADAQABAAACAQC+gCy875BbJDjy/KDczr84xswL1edCE82IkOCBeYuOPbmhR251K9r7UFjlXioa5UnMpRals/pMSkz9MF7yUTzPDg+NjfmsZ8rgHqTKJ7z/yUWEyxd3TcUh0xkkYMCfrA+9rLqgolBiasAOApBDYTi0BsBlfAgNIaTgg7xTX7PHUzceAvujJel1Q6V+bABnFvlDu6kWUhXlrPafWRPUSQz2wEsO7vqrE9UfP+CtuXrJ+t6pMbkVDGc0+JWaPJjBXMjxljBfZHw7UVbHmPlYYTwOGD/IWOgisFfvnutR4JvDZA5elWqkXj+ZEsOw4QFXw71o+b2YWrRBa8l+AFn//zPQvLB753wQVuhzmsidToLss2DfGLdrYKVuCTX7a7OhxKDYRYeyZgeqWK8xVqiyayXgvuxcZV2g+mHi2WuUGGJ6Ycj+JZ9Vh67EnplDmJAKCFXCenS4ou9rMCHqD6i9UVgzakzxy/wd5Cj6R26uKqKo8rZDw9D6zKDzF45NbVh+obAFh/9MuzSCaaL5pXWPUI0kI7iZ8lU7rC8HAj5HhynLZd+rfQazVo+qcoQMxO+A9+fFubru41Aku6siQgv6oXNiGSOcb4bgEDlCBQ/uQgNCn9Vdq3f1yWqC1eAQtwoB4YTE2DZrY1TVZiN202JQNweIIOQUANyKRVV2ITZketmeZQ==".to_string())};
+        crate::utils::time_wrapper(update.update().execute(&self.cassandra_session), "payment_attempts", "UPDATE").await?;
         Ok(())
     }
 
@@ -187,16 +180,8 @@ impl PaymentIntentInterface for CassClient {
         &self,
         payment_intent_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // let mut statement = self.cassandra_session.statement(update_intent_cql());
-
-        // statement.bind(0, "SUCCESS")?;
-        // statement.bind(1, payment_intent_id)?;
-
-        // statement.bind(2,"kaps")?;
-        // statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-
-        // let _rows =
-        //     crate::utils::time_wrapper(statement.execute(), "payment_intent", "UPDATE").await?;
+        let update = UpdateStatusPaymentIntent { merchant_id : "kaps".to_string(), payment_id : payment_intent_id.to_owned(), status : "NEW".to_owned()};
+        let _result = crate::utils::time_wrapper(update.update().execute(self.cassandra_session.as_ref()), "payment_intents", "UPDATE").await?;
         Ok(())
     }
 }
