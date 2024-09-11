@@ -53,13 +53,13 @@ impl App {
 #[cfg(feature = "cassandra")]
 use std::sync::Arc;
 pub struct CassClient {
-    //pub cassandra_session: Session,
+    pub cassandra_session: Arc<scylla::CachingSession>,
     pub account_session: Arc<scylla::CachingSession>,
 }
 
 impl Clone for CassClient{
     fn clone(&self) -> Self {
-        Self {  account_session: Arc::clone(&self.account_session) }
+        Self {  cassandra_session : Arc::clone(&self.cassandra_session) , account_session: Arc::clone(&self.account_session) }
     }
 }
 
@@ -121,16 +121,29 @@ impl CassClient {
 
 
         let scylla_session = scylla::SessionBuilder::new()
-            .known_nodes(scylla_url)
+            .known_nodes(scylla_url.clone())
             .ssl_context(Some(context_builder.build()))
-            .user(username, password)
-            .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
+            .user(username.clone(), password.clone())
+            .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter.clone())))
             .use_keyspace(acc_keyspace, false)
             .build()
             .await?;
+
+        let mut context_builder_r = SslContextBuilder::new(SslMethod::tls())?;
+        context_builder_r.set_certificate_file(certdir.as_path(), SslFiletype::PEM)?;
+        context_builder_r.set_verify(SslVerifyMode::NONE);
+        let p_session = scylla::SessionBuilder::new()
+            .known_nodes(scylla_url)
+            .ssl_context(Some(context_builder_r.build()))
+            .user(username, password)
+            .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
+            .use_keyspace("payments", false)
+            .build()
+            .await?;
         let caching_session: CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(scylla_session, 1024usize);
+        let payment_session : CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(p_session, 1024usize);
         Ok(Self {
-            //cassandra_session: session,
+            cassandra_session: Arc::new(payment_session),
             account_session: Arc::new(caching_session),
         })
     }

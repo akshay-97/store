@@ -113,7 +113,7 @@ impl PaymentAttemptInterface for CassClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let p_a = PaymentAttempt::new(payment_id, version)?;
         let query = p_a.insert();
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "payment_attempts", "CREATE").await?;
+        let _result = crate::utils::time_wrapper(query.execute(&self.cassandra_session.as_ref()), "payment_attempts", "CREATE").await?;
         Ok(())
     }
 
@@ -122,7 +122,7 @@ impl PaymentAttemptInterface for CassClient {
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let query = PaymentAttempt::find_by_merchant_id_and_payment_id("kaps".to_owned(), payment_id.to_owned());
-        let result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "payment_attempts", "FIND_ALL").await?;
+        let result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_attempts", "FIND_ALL").await?;
         let ver = result.try_collect().await?.is_empty();
         if ver{
             return Err(
@@ -154,7 +154,7 @@ impl PaymentAttemptInterface for CassClient {
         payment_id : String
     ) -> Result<(), Box<dyn std::error::Error>>{
         let query = PaymentAttempt::find_by_merchant_id_and_payment_id_and_attempt_id("kaps".to_owned(), payment_id, payment_attempt_id);
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "payment_attempts", "FIND").await?;
+        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_attempts", "FIND").await?;
         Ok(())
     }
 }
@@ -170,7 +170,7 @@ impl PaymentIntentInterface for CassClient {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
         let p_i = PaymentIntent::new(payment_id)?;
         let query = p_i.insert();
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "payment_intents", "CREATE").await?;
+        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "CREATE").await?;
         Ok(())
     }
 
@@ -179,7 +179,7 @@ impl PaymentIntentInterface for CassClient {
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let query = PaymentIntent::find_by_merchant_id_and_payment_id("kaps".to_owned(), payment_id.to_owned());
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "payment_intents", "FIND").await?;
+        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "FIND").await?;
         Ok(())
     }
 
