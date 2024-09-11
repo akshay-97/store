@@ -4,364 +4,364 @@ use time::PrimitiveDateTime;
 use charybdis::macros::charybdis_model;
 use charybdis::types::{Text, Time, Timestamp};
 
-#[derive(Serialize, Deserialize)]
-pub struct PaymentAttempt {
-    pub payment_id: String,
-    pub merchant_id: String,
-    pub attempt_id: String,
-    pub status: AttemptStatus,
-    pub amount: i64,
-    pub currency: Option<Currency>,
-    pub save_to_locker: Option<bool>,
-    pub connector: Option<String>,
-    pub error_message: Option<String>,
-    pub offer_amount: Option<i64>,
-    pub surcharge_amount: Option<i64>,
-    pub tax_amount: Option<i64>,
-    pub payment_method_id: Option<String>,
-    pub payment_method: Option<PaymentMethod>,
-    pub connector_transaction_id: Option<String>,
-    pub capture_method: Option<CaptureMethod>,
-    pub capture_on: Option<time::PrimitiveDateTime>,
-    pub confirm: bool,
-    pub authentication_type: Option<AuthenticationType>,
-    pub created_at: PrimitiveDateTime,
-    pub modified_at: PrimitiveDateTime,
-    pub last_synced: Option<PrimitiveDateTime>,
-    pub cancellation_reason: Option<String>,
-    pub amount_to_capture: Option<i64>,
-    pub mandate_id: Option<String>,
-    pub browser_info: Option<serde_json::Value>,
-    pub error_code: Option<String>,
-    pub payment_token: Option<String>,
-    //TODO: check cql map type conversion
-    pub connector_metadata: Option<serde_json::Value>,
-    pub payment_experience: Option<PaymentExperience>,
-    pub payment_method_type: Option<PaymentMethodType>,
-    pub payment_method_data: Option<serde_json::Value>,
-    pub business_sub_label: Option<String>,
-    pub straight_through_algorithm: Option<serde_json::Value>,
-    pub preprocessing_step_id: Option<String>,
-    // providing a location to store mandate details intermediately for transaction
-    pub mandate_details: Option<MandateDataType>,
-    pub error_reason: Option<String>,
-    pub multiple_capture_count: Option<i16>,
-    // reference to the payment at connector side
-    pub connector_response_reference_id: Option<String>,
-    pub amount_capturable: i64,
-    pub updated_by: String,
-    pub merchant_connector_id: Option<String>,
-    pub authentication_data: Option<serde_json::Value>,
-    pub encoded_data: Option<String>,
-    pub unified_code: Option<String>,
-    pub unified_message: Option<String>,
-    pub net_amount: Option<i64>,
-    pub external_three_ds_authentication_attempted: Option<bool>,
-    pub authentication_connector: Option<String>,
-    pub authentication_id: Option<String>,
-    pub mandate_data: Option<MandateDetails>,
-    pub fingerprint_id: Option<String>,
-    pub payment_method_billing_address_id: Option<String>,
-    pub charge_id: Option<String>,
-    pub client_source: Option<String>,
-    pub client_version: Option<String>,
-}
+// #[derive(Serialize, Deserialize)]
+// pub struct PaymentAttempt {
+//     pub payment_id: String,
+//     pub merchant_id: String,
+//     pub attempt_id: String,
+//     pub status: AttemptStatus,
+//     pub amount: i64,
+//     pub currency: Option<Currency>,
+//     pub save_to_locker: Option<bool>,
+//     pub connector: Option<String>,
+//     pub error_message: Option<String>,
+//     pub offer_amount: Option<i64>,
+//     pub surcharge_amount: Option<i64>,
+//     pub tax_amount: Option<i64>,
+//     pub payment_method_id: Option<String>,
+//     pub payment_method: Option<PaymentMethod>,
+//     pub connector_transaction_id: Option<String>,
+//     pub capture_method: Option<CaptureMethod>,
+//     pub capture_on: Option<time::PrimitiveDateTime>,
+//     pub confirm: bool,
+//     pub authentication_type: Option<AuthenticationType>,
+//     pub created_at: PrimitiveDateTime,
+//     pub modified_at: PrimitiveDateTime,
+//     pub last_synced: Option<PrimitiveDateTime>,
+//     pub cancellation_reason: Option<String>,
+//     pub amount_to_capture: Option<i64>,
+//     pub mandate_id: Option<String>,
+//     pub browser_info: Option<serde_json::Value>,
+//     pub error_code: Option<String>,
+//     pub payment_token: Option<String>,
+//     //TODO: check cql map type conversion
+//     pub connector_metadata: Option<serde_json::Value>,
+//     pub payment_experience: Option<PaymentExperience>,
+//     pub payment_method_type: Option<PaymentMethodType>,
+//     pub payment_method_data: Option<serde_json::Value>,
+//     pub business_sub_label: Option<String>,
+//     pub straight_through_algorithm: Option<serde_json::Value>,
+//     pub preprocessing_step_id: Option<String>,
+//     // providing a location to store mandate details intermediately for transaction
+//     pub mandate_details: Option<MandateDataType>,
+//     pub error_reason: Option<String>,
+//     pub multiple_capture_count: Option<i16>,
+//     // reference to the payment at connector side
+//     pub connector_response_reference_id: Option<String>,
+//     pub amount_capturable: i64,
+//     pub updated_by: String,
+//     pub merchant_connector_id: Option<String>,
+//     pub authentication_data: Option<serde_json::Value>,
+//     pub encoded_data: Option<String>,
+//     pub unified_code: Option<String>,
+//     pub unified_message: Option<String>,
+//     pub net_amount: Option<i64>,
+//     pub external_three_ds_authentication_attempted: Option<bool>,
+//     pub authentication_connector: Option<String>,
+//     pub authentication_id: Option<String>,
+//     pub mandate_data: Option<MandateDetails>,
+//     pub fingerprint_id: Option<String>,
+//     pub payment_method_billing_address_id: Option<String>,
+//     pub charge_id: Option<String>,
+//     pub client_source: Option<String>,
+//     pub client_version: Option<String>,
+// }
 
-#[cfg(feature = "cassandra")]
-use cassandra_cpp::{BindRustType, Statement};
+// #[cfg(feature = "cassandra")]
+// use cassandra_cpp::{BindRustType, Statement};
 
-impl PaymentAttempt {
-    #[cfg(feature = "cassandra")]
-    pub fn populate_statement(
-        &self,
-        stmt: &mut Statement,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        stmt.bind(0, self.payment_id.as_str())?;
-        stmt.bind(1, self.merchant_id.as_str())?;
-        stmt.bind(2, self.attempt_id.as_str())?;
-        stmt.bind(3, enum_parse(&self.status)?.as_str())?;
-        stmt.bind(4, self.amount)?;
-        for_opt(stmt, &self.currency, 5)?;
-        e_for_opt(stmt, &self.save_to_locker, 6)?;
+// impl PaymentAttempt {
+//     #[cfg(feature = "cassandra")]
+//     pub fn populate_statement(
+//         &self,
+//         stmt: &mut Statement,
+//     ) -> Result<(), Box<dyn std::error::Error>> {
+//         stmt.bind(0, self.payment_id.as_str())?;
+//         stmt.bind(1, self.merchant_id.as_str())?;
+//         stmt.bind(2, self.attempt_id.as_str())?;
+//         stmt.bind(3, enum_parse(&self.status)?.as_str())?;
+//         stmt.bind(4, self.amount)?;
+//         for_opt(stmt, &self.currency, 5)?;
+//         e_for_opt(stmt, &self.save_to_locker, 6)?;
 
-        opt_string(stmt, &self.connector, 7)?;
-        opt_string(stmt, &self.error_message, 8)?;
-        e_for_opt(stmt, &self.offer_amount, 9)?;
-        e_for_opt(stmt, &self.surcharge_amount, 10)?;
-        e_for_opt(stmt, &self.tax_amount, 11)?;
-        opt_string(stmt, &self.payment_method_id, 12)?;
-        for_opt(stmt, &self.payment_method, 13)?;
-        opt_string(stmt, &self.connector_transaction_id, 14)?;
-        for_opt(stmt, &self.capture_method, 15)?;
-        for_opt(stmt, &self.capture_on, 16)?;
-        stmt.bind(17, self.confirm)?;
-        for_opt(stmt, &self.authentication_type, 18)?;
-        stmt.bind(19, enum_parse(&self.created_at)?.as_str())?;
-        stmt.bind(20, enum_parse(&self.modified_at)?.as_str())?;
-        for_opt(stmt, &self.last_synced, 21)?;
+//         opt_string(stmt, &self.connector, 7)?;
+//         opt_string(stmt, &self.error_message, 8)?;
+//         e_for_opt(stmt, &self.offer_amount, 9)?;
+//         e_for_opt(stmt, &self.surcharge_amount, 10)?;
+//         e_for_opt(stmt, &self.tax_amount, 11)?;
+//         opt_string(stmt, &self.payment_method_id, 12)?;
+//         for_opt(stmt, &self.payment_method, 13)?;
+//         opt_string(stmt, &self.connector_transaction_id, 14)?;
+//         for_opt(stmt, &self.capture_method, 15)?;
+//         for_opt(stmt, &self.capture_on, 16)?;
+//         stmt.bind(17, self.confirm)?;
+//         for_opt(stmt, &self.authentication_type, 18)?;
+//         stmt.bind(19, enum_parse(&self.created_at)?.as_str())?;
+//         stmt.bind(20, enum_parse(&self.modified_at)?.as_str())?;
+//         for_opt(stmt, &self.last_synced, 21)?;
 
-        opt_string(stmt, &self.cancellation_reason, 22)?;
-        e_for_opt(stmt, &self.amount_to_capture, 23)?;
-        opt_string(stmt, &self.mandate_id, 24)?;
-        for_opt(stmt, &self.browser_info, 25)?;
-        opt_string(stmt, &self.error_code, 26)?;
-        opt_string(stmt, &self.payment_token, 27)?;
-        for_opt(stmt, &self.connector_metadata, 28)?;
-        for_opt(stmt, &self.payment_experience, 29)?;
-        for_opt(stmt, &self.payment_method_type, 30)?;
-        for_opt(stmt, &self.payment_method_data, 31)?;
-        opt_string(stmt, &self.business_sub_label, 32)?;
+//         opt_string(stmt, &self.cancellation_reason, 22)?;
+//         e_for_opt(stmt, &self.amount_to_capture, 23)?;
+//         opt_string(stmt, &self.mandate_id, 24)?;
+//         for_opt(stmt, &self.browser_info, 25)?;
+//         opt_string(stmt, &self.error_code, 26)?;
+//         opt_string(stmt, &self.payment_token, 27)?;
+//         for_opt(stmt, &self.connector_metadata, 28)?;
+//         for_opt(stmt, &self.payment_experience, 29)?;
+//         for_opt(stmt, &self.payment_method_type, 30)?;
+//         for_opt(stmt, &self.payment_method_data, 31)?;
+//         opt_string(stmt, &self.business_sub_label, 32)?;
 
-        for_opt(stmt, &self.straight_through_algorithm, 33)?;
-        opt_string(stmt, &self.preprocessing_step_id, 34)?;
-        for_opt(stmt, &self.mandate_details, 35)?;
-        opt_string(stmt, &self.error_reason, 36)?;
-        e_for_opt(stmt, &self.multiple_capture_count, 37)?;
-        opt_string(stmt, &self.connector_response_reference_id, 38)?;
-        stmt.bind(39, self.amount_capturable)?;
-        stmt.bind(40, self.updated_by.as_str())?;
-        opt_string(stmt, &self.merchant_connector_id, 41)?;
-        for_opt(stmt, &self.authentication_data, 42)?;
-        opt_string(stmt, &self.encoded_data, 43)?;
-        opt_string(stmt, &self.unified_code, 44)?;
-        opt_string(stmt, &self.unified_message, 45)?;
-        e_for_opt(stmt, &self.net_amount, 46)?;
-        e_for_opt(stmt, &self.external_three_ds_authentication_attempted, 47)?;
-        opt_string(stmt, &self.authentication_connector, 48)?;
-        opt_string(stmt, &self.authentication_id, 49)?;
-        for_opt(stmt, &self.mandate_data, 50)?;
-        opt_string(stmt, &self.fingerprint_id, 51)?;
-        opt_string(stmt, &self.payment_method_billing_address_id, 52)?;
-        opt_string(stmt, &self.charge_id, 53)?;
+//         for_opt(stmt, &self.straight_through_algorithm, 33)?;
+//         opt_string(stmt, &self.preprocessing_step_id, 34)?;
+//         for_opt(stmt, &self.mandate_details, 35)?;
+//         opt_string(stmt, &self.error_reason, 36)?;
+//         e_for_opt(stmt, &self.multiple_capture_count, 37)?;
+//         opt_string(stmt, &self.connector_response_reference_id, 38)?;
+//         stmt.bind(39, self.amount_capturable)?;
+//         stmt.bind(40, self.updated_by.as_str())?;
+//         opt_string(stmt, &self.merchant_connector_id, 41)?;
+//         for_opt(stmt, &self.authentication_data, 42)?;
+//         opt_string(stmt, &self.encoded_data, 43)?;
+//         opt_string(stmt, &self.unified_code, 44)?;
+//         opt_string(stmt, &self.unified_message, 45)?;
+//         e_for_opt(stmt, &self.net_amount, 46)?;
+//         e_for_opt(stmt, &self.external_three_ds_authentication_attempted, 47)?;
+//         opt_string(stmt, &self.authentication_connector, 48)?;
+//         opt_string(stmt, &self.authentication_id, 49)?;
+//         for_opt(stmt, &self.mandate_data, 50)?;
+//         opt_string(stmt, &self.fingerprint_id, 51)?;
+//         opt_string(stmt, &self.payment_method_billing_address_id, 52)?;
+//         opt_string(stmt, &self.charge_id, 53)?;
 
-        opt_string(stmt, &self.client_source, 54)?;
-        opt_string(stmt, &self.client_version, 55)?;
+//         opt_string(stmt, &self.client_source, 54)?;
+//         opt_string(stmt, &self.client_version, 55)?;
 
-        Ok(())
-    }
+//         Ok(())
+//     }
 
-    pub fn new(i: String, version: String) -> Self {
-        Self {
-            payment_id: i.clone(),
-            merchant_id: "kaps".to_owned(),
-            attempt_id: version,
-            status: AttemptStatus::AuthenticationFailed,
-            amount: i64::MAX,
-            currency: Some(Currency::USD),
-            save_to_locker: Some(false),
-            connector: Some("randomeString12412953w23421".to_owned()),
-            error_message: Some("randomeString12412953w23421".to_owned()),
-            offer_amount: Some(i64::MAX),
-            surcharge_amount: Some(i64::MAX),
-            tax_amount: Some(i64::MAX),
-            payment_method_id: Some("randomeString12412953w23421".to_owned()),
-            payment_method: Some(PaymentMethod::Card),
-            connector_transaction_id: Some("randomeString12412953w23421".to_owned()),
-            capture_method: Some(CaptureMethod::Automatic),
-            //#[serde(default, with = "common_utils::custom_serde::iso8601::option")]
-            capture_on: Some(time::PrimitiveDateTime::MAX),
-            confirm: true,
-            authentication_type: Some(AuthenticationType::NoThreeDs),
-            //#[serde(with = "common_utils::custom_serde::iso8601")]
-            created_at: time::PrimitiveDateTime::MAX,
-            // #[serde(with = "common_utils::custom_serde::iso8601")]
-            modified_at: time::PrimitiveDateTime::MAX,
-            //#[serde(default, with = "common_utils::custom_serde::iso8601::option")]
-            last_synced: Some(time::PrimitiveDateTime::MAX),
-            cancellation_reason: Some("randomeString12412953w23421".to_owned()),
-            amount_to_capture: Some(i64::MAX),
-            mandate_id: Some("randomeString12412953w23421".to_owned()),
-            browser_info: None,
-            error_code: Some("randomeString12412953w23421".to_owned()),
-            payment_token: Some("randomeString12412953w23421".to_owned()),
-            connector_metadata: Some(get_large_value()), //Value
-            payment_experience: None,
-            payment_method_type: None,
-            payment_method_data: Some(get_large_value()), //Value
-            business_sub_label: Some("randomeString12412953w23421".to_owned()),
-            straight_through_algorithm: None,
-            preprocessing_step_id: Some("randomeString12412953w23421".to_owned()),
-            // providing a location to store mandate details intermediately for transaction
-            mandate_details: None,
-            error_reason: Some("randomeString12412953w23421".to_owned()),
-            multiple_capture_count: None,
-            // reference to the payment at connector side
-            connector_response_reference_id: Some("randomeString12412953w23421".to_owned()),
-            amount_capturable: i64::MAX,
-            updated_by: "foo".to_owned(),
+//     pub fn new(i: String, version: String) -> Self {
+//         Self {
+//             payment_id: i.clone(),
+//             merchant_id: "kaps".to_owned(),
+//             attempt_id: version,
+//             status: AttemptStatus::AuthenticationFailed,
+//             amount: i64::MAX,
+//             currency: Some(Currency::USD),
+//             save_to_locker: Some(false),
+//             connector: Some("randomeString12412953w23421".to_owned()),
+//             error_message: Some("randomeString12412953w23421".to_owned()),
+//             offer_amount: Some(i64::MAX),
+//             surcharge_amount: Some(i64::MAX),
+//             tax_amount: Some(i64::MAX),
+//             payment_method_id: Some("randomeString12412953w23421".to_owned()),
+//             payment_method: Some(PaymentMethod::Card),
+//             connector_transaction_id: Some("randomeString12412953w23421".to_owned()),
+//             capture_method: Some(CaptureMethod::Automatic),
+//             //#[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+//             capture_on: Some(time::PrimitiveDateTime::MAX),
+//             confirm: true,
+//             authentication_type: Some(AuthenticationType::NoThreeDs),
+//             //#[serde(with = "common_utils::custom_serde::iso8601")]
+//             created_at: time::PrimitiveDateTime::MAX,
+//             // #[serde(with = "common_utils::custom_serde::iso8601")]
+//             modified_at: time::PrimitiveDateTime::MAX,
+//             //#[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+//             last_synced: Some(time::PrimitiveDateTime::MAX),
+//             cancellation_reason: Some("randomeString12412953w23421".to_owned()),
+//             amount_to_capture: Some(i64::MAX),
+//             mandate_id: Some("randomeString12412953w23421".to_owned()),
+//             browser_info: None,
+//             error_code: Some("randomeString12412953w23421".to_owned()),
+//             payment_token: Some("randomeString12412953w23421".to_owned()),
+//             connector_metadata: Some(get_large_value()), //Value
+//             payment_experience: None,
+//             payment_method_type: None,
+//             payment_method_data: Some(get_large_value()), //Value
+//             business_sub_label: Some("randomeString12412953w23421".to_owned()),
+//             straight_through_algorithm: None,
+//             preprocessing_step_id: Some("randomeString12412953w23421".to_owned()),
+//             // providing a location to store mandate details intermediately for transaction
+//             mandate_details: None,
+//             error_reason: Some("randomeString12412953w23421".to_owned()),
+//             multiple_capture_count: None,
+//             // reference to the payment at connector side
+//             connector_response_reference_id: Some("randomeString12412953w23421".to_owned()),
+//             amount_capturable: i64::MAX,
+//             updated_by: "foo".to_owned(),
 
-            merchant_connector_id: Some("randomeString12412953w23421".to_owned()),
-            authentication_data: Some(get_large_value()), //Value
-            encoded_data: Some("randomeString12412953w23421".to_owned()),
-            unified_code: Some("randomeString12412953w23421".to_owned()),
-            unified_message: Some("randomeString12412953w23421".to_owned()),
-            net_amount: Some(i64::MAX),
-            external_three_ds_authentication_attempted: None,
-            authentication_connector: Some("randomeString12412953w23421".to_owned()),
-            authentication_id: Some("randomeString12412953w23421".to_owned()),
-            mandate_data: None,
-            fingerprint_id: Some("randomeString12412953w23421".to_owned()),
-            payment_method_billing_address_id: Some("randomeString12412953w23421".to_owned()),
-            charge_id: Some("randomeString12412953w23421".to_owned()),
-            client_source: Some("randomeString12412953w23421".to_owned()),
-            client_version: Some("randomeString12412953w23421".to_owned()),
-        }
-    }
-}
+//             merchant_connector_id: Some("randomeString12412953w23421".to_owned()),
+//             authentication_data: Some(get_large_value()), //Value
+//             encoded_data: Some("randomeString12412953w23421".to_owned()),
+//             unified_code: Some("randomeString12412953w23421".to_owned()),
+//             unified_message: Some("randomeString12412953w23421".to_owned()),
+//             net_amount: Some(i64::MAX),
+//             external_three_ds_authentication_attempted: None,
+//             authentication_connector: Some("randomeString12412953w23421".to_owned()),
+//             authentication_id: Some("randomeString12412953w23421".to_owned()),
+//             mandate_data: None,
+//             fingerprint_id: Some("randomeString12412953w23421".to_owned()),
+//             payment_method_billing_address_id: Some("randomeString12412953w23421".to_owned()),
+//             charge_id: Some("randomeString12412953w23421".to_owned()),
+//             client_source: Some("randomeString12412953w23421".to_owned()),
+//             client_version: Some("randomeString12412953w23421".to_owned()),
+//         }
+//     }
+// }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct PaymentIntent {
-    pub payment_id: String,
-    pub merchant_id: String,
-    pub status: String,
-    pub amount: i64,
-    pub currency: Option<Currency>,
-    pub amount_captured: Option<i64>,
-    pub customer_id: Option<String>,
-    pub description: Option<String>,
-    pub return_url: Option<String>,
-    pub metadata: Option<serde_json::Value>,
-    pub connector_id: Option<String>,
-    pub shipping_address_id: Option<String>,
-    pub billing_address_id: Option<String>,
-    pub statement_descriptor_name: Option<String>,
-    pub statement_descriptor_suffix: Option<String>,
-    pub created_at: PrimitiveDateTime,
-    pub modified_at: PrimitiveDateTime,
-    pub last_synced: Option<PrimitiveDateTime>,
-    pub setup_future_usage: Option<String>,
-    pub off_session: Option<bool>,
-    pub client_secret: Option<String>,
-    pub active_attempt_id: String,
-    pub business_country: Option<String>,
-    pub business_label: Option<String>,
-    pub order_details: Option<Vec<serde_json::Value>>,
-    pub allowed_payment_method_types: Option<serde_json::Value>,
-    pub connector_metadata: Option<serde_json::Value>,
-    pub feature_metadata: Option<serde_json::Value>,
-    pub attempt_count: i16,
-    pub profile_id: Option<String>,
-    // Denotes the action(approve or reject) taken by merchant in case of manual review.
-    // Manual review can occur when the transaction is marked as risky by the frm_processor, payment processor or when there is underpayment/over payment incase of crypto payment
-    pub merchant_decision: Option<String>,
-    pub payment_link_id: Option<String>,
-    pub payment_confirm_source: Option<String>,
+// #[derive(serde::Serialize, serde::Deserialize)]
+// pub struct PaymentIntent {
+//     pub payment_id: String,
+//     pub merchant_id: String,
+//     pub status: String,
+//     pub amount: i64,
+//     pub currency: Option<Currency>,
+//     pub amount_captured: Option<i64>,
+//     pub customer_id: Option<String>,
+//     pub description: Option<String>,
+//     pub return_url: Option<String>,
+//     pub metadata: Option<serde_json::Value>,
+//     pub connector_id: Option<String>,
+//     pub shipping_address_id: Option<String>,
+//     pub billing_address_id: Option<String>,
+//     pub statement_descriptor_name: Option<String>,
+//     pub statement_descriptor_suffix: Option<String>,
+//     pub created_at: PrimitiveDateTime,
+//     pub modified_at: PrimitiveDateTime,
+//     pub last_synced: Option<PrimitiveDateTime>,
+//     pub setup_future_usage: Option<String>,
+//     pub off_session: Option<bool>,
+//     pub client_secret: Option<String>,
+//     pub active_attempt_id: String,
+//     pub business_country: Option<String>,
+//     pub business_label: Option<String>,
+//     pub order_details: Option<Vec<serde_json::Value>>,
+//     pub allowed_payment_method_types: Option<serde_json::Value>,
+//     pub connector_metadata: Option<serde_json::Value>,
+//     pub feature_metadata: Option<serde_json::Value>,
+//     pub attempt_count: i16,
+//     pub profile_id: Option<String>,
+//     // Denotes the action(approve or reject) taken by merchant in case of manual review.
+//     // Manual review can occur when the transaction is marked as risky by the frm_processor, payment processor or when there is underpayment/over payment incase of crypto payment
+//     pub merchant_decision: Option<String>,
+//     pub payment_link_id: Option<String>,
+//     pub payment_confirm_source: Option<String>,
 
-    pub updated_by: String,
-    pub surcharge_applicable: Option<bool>,
-    pub request_incremental_authorization: Option<String>,
-    pub incremental_authorization_allowed: Option<bool>,
-    pub authorization_count: Option<i32>,
-    pub session_expiry: Option<PrimitiveDateTime>,
-    pub fingerprint_id: Option<String>,
-    pub request_external_three_ds_authentication: Option<bool>,
-    pub charges: Option<serde_json::Value>,
-    pub frm_metadata: Option<serde_json::Value>,
-}
+//     pub updated_by: String,
+//     pub surcharge_applicable: Option<bool>,
+//     pub request_incremental_authorization: Option<String>,
+//     pub incremental_authorization_allowed: Option<bool>,
+//     pub authorization_count: Option<i32>,
+//     pub session_expiry: Option<PrimitiveDateTime>,
+//     pub fingerprint_id: Option<String>,
+//     pub request_external_three_ds_authentication: Option<bool>,
+//     pub charges: Option<serde_json::Value>,
+//     pub frm_metadata: Option<serde_json::Value>,
+// }
 
-impl PaymentIntent {
-    pub fn new(i: String) -> Self {
-        PaymentIntent {
-            payment_id: i.clone(),
-            merchant_id: "kaps".to_string(),
-            status: "Processing".to_string(),
-            amount: 1234_i64,
-            currency: Some(Currency::USD),
-            amount_captured: None,
-            customer_id: None,
-            description: Some("randomeString12412953w23421".to_owned()),
-            return_url: Some("randomeString12412953w23421".to_owned()),
-            metadata: None,
-            connector_id: Some("randomeString12412953w23421".to_owned()),
-            shipping_address_id: Some("randomeString12412953w23421".to_owned()),
-            billing_address_id: Some("randomeString12412953w23421".to_owned()),
-            statement_descriptor_name: Some("randomeString12412953w23421".to_owned()),
-            statement_descriptor_suffix: Some("randomeString12412953w23421".to_owned()),
-            created_at: time::PrimitiveDateTime::MAX,
-            modified_at: time::PrimitiveDateTime::MAX,
-            last_synced: Some(time::PrimitiveDateTime::MAX),
-            setup_future_usage: Some(String::from("OffSession")),
-            off_session: Some(false),
-            client_secret: Some("randomeString12412953w23421".to_owned()),
-            active_attempt_id: "asdasdas".to_string(),
+// impl PaymentIntent {
+//     pub fn new(i: String) -> Self {
+//         PaymentIntent {
+//             payment_id: i.clone(),
+//             merchant_id: "kaps".to_string(),
+//             status: "Processing".to_string(),
+//             amount: 1234_i64,
+//             currency: Some(Currency::USD),
+//             amount_captured: None,
+//             customer_id: None,
+//             description: Some("randomeString12412953w23421".to_owned()),
+//             return_url: Some("randomeString12412953w23421".to_owned()),
+//             metadata: None,
+//             connector_id: Some("randomeString12412953w23421".to_owned()),
+//             shipping_address_id: Some("randomeString12412953w23421".to_owned()),
+//             billing_address_id: Some("randomeString12412953w23421".to_owned()),
+//             statement_descriptor_name: Some("randomeString12412953w23421".to_owned()),
+//             statement_descriptor_suffix: Some("randomeString12412953w23421".to_owned()),
+//             created_at: time::PrimitiveDateTime::MAX,
+//             modified_at: time::PrimitiveDateTime::MAX,
+//             last_synced: Some(time::PrimitiveDateTime::MAX),
+//             setup_future_usage: Some(String::from("OffSession")),
+//             off_session: Some(false),
+//             client_secret: Some("randomeString12412953w23421".to_owned()),
+//             active_attempt_id: "asdasdas".to_string(),
 
-            business_country: None,
-            business_label: Some("randomeString12412953w23421".to_owned()),
-            order_details: None, //Option<Vec<pii::SecretSerdeValue>>,
-            allowed_payment_method_types: None, //Value
-            connector_metadata: Some(get_large_value()), //Value
-            feature_metadata: Some(get_large_value()), //Value
-            attempt_count: i16::MAX,
-            profile_id: Some("randomeString12412953w23421".to_owned()),
-            merchant_decision: Some("randomeString12412953w23421".to_owned()),
-            payment_link_id: Some("randomeString12412953w23421".to_owned()),
-            payment_confirm_source: None,
-            updated_by: "asdasds".to_string(),
+//             business_country: None,
+//             business_label: Some("randomeString12412953w23421".to_owned()),
+//             order_details: None, //Option<Vec<pii::SecretSerdeValue>>,
+//             allowed_payment_method_types: None, //Value
+//             connector_metadata: Some(get_large_value()), //Value
+//             feature_metadata: Some(get_large_value()), //Value
+//             attempt_count: i16::MAX,
+//             profile_id: Some("randomeString12412953w23421".to_owned()),
+//             merchant_decision: Some("randomeString12412953w23421".to_owned()),
+//             payment_link_id: Some("randomeString12412953w23421".to_owned()),
+//             payment_confirm_source: None,
+//             updated_by: "asdasds".to_string(),
 
-            surcharge_applicable: Some(false),
-            request_incremental_authorization: None,
-            incremental_authorization_allowed: Some(false),
-            authorization_count: None,
-            session_expiry: Some(time::PrimitiveDateTime::MAX),
-            fingerprint_id: Some("randomeString12412953w23421".to_owned()),
-            request_external_three_ds_authentication: Some(false),
-            charges: None,      //Option<pii::SecretSerdeValue>,
-            frm_metadata: None, //Option<pii::SecretSerdeValue>,
-        }
-    }
+//             surcharge_applicable: Some(false),
+//             request_incremental_authorization: None,
+//             incremental_authorization_allowed: Some(false),
+//             authorization_count: None,
+//             session_expiry: Some(time::PrimitiveDateTime::MAX),
+//             fingerprint_id: Some("randomeString12412953w23421".to_owned()),
+//             request_external_three_ds_authentication: Some(false),
+//             charges: None,      //Option<pii::SecretSerdeValue>,
+//             frm_metadata: None, //Option<pii::SecretSerdeValue>,
+//         }
+//     }
 
-    #[cfg(feature = "cassandra")]
-    pub fn populate_statement(
-        &self,
-        stmt: &mut Statement,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        stmt.bind(0, self.payment_id.as_str())?;
-        stmt.bind(1, self.merchant_id.as_str())?;
-        stmt.bind(2, self.status.as_str())?;
-        #[cfg(feature = "cassandra")]
-        stmt.bind(3, self.amount)?;
-        for_opt(stmt, &self.currency, 4)?;
-        e_for_opt(stmt, &self.amount_captured, 5)?;
-        opt_string(stmt, &self.customer_id, 6)?;
-        opt_string(stmt, &self.description, 7)?;
-        opt_string(stmt, &self.return_url, 8)?;
-        for_opt(stmt, &self.metadata, 9)?;
-        opt_string(stmt, &self.connector_id, 10)?;
-        opt_string(stmt, &self.shipping_address_id, 11)?;
-        opt_string(stmt, &self.billing_address_id, 12)?;
-        opt_string(stmt, &self.statement_descriptor_name, 13)?;
-        opt_string(stmt, &self.statement_descriptor_suffix, 14)?;
-        for_opt(stmt, &Some(self.created_at), 15)?;
-        for_opt(stmt, &Some(self.modified_at), 16)?;
-        for_opt(stmt, &self.last_synced, 17)?;
-        opt_string(stmt, &self.setup_future_usage, 18)?;
-        e_for_opt(stmt, &self.off_session, 19)?;
-        opt_string(stmt, &self.client_secret, 20)?;
-        stmt.bind(21, self.active_attempt_id.as_str())?;
-        opt_string(stmt, &self.business_country, 22)?;
-        opt_string(stmt, &self.business_label, 23)?;
-        for_opt(stmt, &self.order_details, 24)?;
-        for_opt(stmt, &self.allowed_payment_method_types, 25)?;
-        for_opt(stmt, &self.connector_metadata, 26)?;
-        for_opt(stmt, &self.feature_metadata, 27)?;
-        stmt.bind(28, self.attempt_count)?;
-        opt_string(stmt, &self.profile_id, 29)?;
-        opt_string(stmt, &self.merchant_decision, 30)?;
-        opt_string(stmt, &self.payment_link_id, 31)?;
-        opt_string(stmt, &self.payment_confirm_source, 32)?;
-        stmt.bind(33, self.updated_by.as_str())?;
-        e_for_opt(stmt, &self.surcharge_applicable, 34)?;
-        opt_string(stmt, &self.request_incremental_authorization, 35)?;
-        e_for_opt(stmt, &self.incremental_authorization_allowed, 36)?;
-        e_for_opt(stmt, &self.authorization_count, 37)?;
-        for_opt(stmt, &self.session_expiry, 38)?;
-        opt_string(stmt, &self.fingerprint_id, 39)?;
-        e_for_opt(stmt, &self.request_external_three_ds_authentication, 40)?;
-        for_opt(stmt, &self.charges, 41)?;
-        for_opt(stmt, &self.frm_metadata, 42)?;
-        Ok(())
-    }
-}
+//     #[cfg(feature = "cassandra")]
+//     pub fn populate_statement(
+//         &self,
+//         stmt: &mut Statement,
+//     ) -> Result<(), Box<dyn std::error::Error>> {
+//         stmt.bind(0, self.payment_id.as_str())?;
+//         stmt.bind(1, self.merchant_id.as_str())?;
+//         stmt.bind(2, self.status.as_str())?;
+//         #[cfg(feature = "cassandra")]
+//         stmt.bind(3, self.amount)?;
+//         for_opt(stmt, &self.currency, 4)?;
+//         e_for_opt(stmt, &self.amount_captured, 5)?;
+//         opt_string(stmt, &self.customer_id, 6)?;
+//         opt_string(stmt, &self.description, 7)?;
+//         opt_string(stmt, &self.return_url, 8)?;
+//         for_opt(stmt, &self.metadata, 9)?;
+//         opt_string(stmt, &self.connector_id, 10)?;
+//         opt_string(stmt, &self.shipping_address_id, 11)?;
+//         opt_string(stmt, &self.billing_address_id, 12)?;
+//         opt_string(stmt, &self.statement_descriptor_name, 13)?;
+//         opt_string(stmt, &self.statement_descriptor_suffix, 14)?;
+//         for_opt(stmt, &Some(self.created_at), 15)?;
+//         for_opt(stmt, &Some(self.modified_at), 16)?;
+//         for_opt(stmt, &self.last_synced, 17)?;
+//         opt_string(stmt, &self.setup_future_usage, 18)?;
+//         e_for_opt(stmt, &self.off_session, 19)?;
+//         opt_string(stmt, &self.client_secret, 20)?;
+//         stmt.bind(21, self.active_attempt_id.as_str())?;
+//         opt_string(stmt, &self.business_country, 22)?;
+//         opt_string(stmt, &self.business_label, 23)?;
+//         for_opt(stmt, &self.order_details, 24)?;
+//         for_opt(stmt, &self.allowed_payment_method_types, 25)?;
+//         for_opt(stmt, &self.connector_metadata, 26)?;
+//         for_opt(stmt, &self.feature_metadata, 27)?;
+//         stmt.bind(28, self.attempt_count)?;
+//         opt_string(stmt, &self.profile_id, 29)?;
+//         opt_string(stmt, &self.merchant_decision, 30)?;
+//         opt_string(stmt, &self.payment_link_id, 31)?;
+//         opt_string(stmt, &self.payment_confirm_source, 32)?;
+//         stmt.bind(33, self.updated_by.as_str())?;
+//         e_for_opt(stmt, &self.surcharge_applicable, 34)?;
+//         opt_string(stmt, &self.request_incremental_authorization, 35)?;
+//         e_for_opt(stmt, &self.incremental_authorization_allowed, 36)?;
+//         e_for_opt(stmt, &self.authorization_count, 37)?;
+//         for_opt(stmt, &self.session_expiry, 38)?;
+//         opt_string(stmt, &self.fingerprint_id, 39)?;
+//         e_for_opt(stmt, &self.request_external_three_ds_authentication, 40)?;
+//         for_opt(stmt, &self.charges, 41)?;
+//         for_opt(stmt, &self.frm_metadata, 42)?;
+//         Ok(())
+//     }
+// }
 
 pub fn get_large_value() -> serde_json::Value {
     serde_json::json!({
@@ -418,52 +418,52 @@ fn enum_parse<T: serde::Serialize>(em: &T) -> Result<String, Box<dyn std::error:
     Ok(serde_json::to_string(em)?)
 }
 
-#[cfg(feature = "cassandra")]
-pub fn for_opt<T: serde::Serialize>(
-    stat: &mut Statement,
-    data: &Option<T>,
-    loc: usize,
-) -> Result<(), Box<dyn std::error::Error>>
-where
-{
-    match data {
-        Some(val) => stat.bind(loc, enum_parse(val)?.as_str())?,
-        None => stat.bind_null(loc)?,
-    };
+// #[cfg(feature = "cassandra")]
+// pub fn for_opt<T: serde::Serialize>(
+//     stat: &mut Statement,
+//     data: &Option<T>,
+//     loc: usize,
+// ) -> Result<(), Box<dyn std::error::Error>>
+// where
+// {
+//     match data {
+//         Some(val) => stat.bind(loc, enum_parse(val)?.as_str())?,
+//         None => stat.bind_null(loc)?,
+//     };
 
-    Ok(())
-}
+//     Ok(())
+// }
 
-#[cfg(feature = "cassandra")]
-fn opt_string(
-    stat: &mut Statement,
-    data: &Option<String>,
-    loc: usize,
-) -> Result<(), Box<dyn std::error::Error>> {
-    match data {
-        Some(val) => stat.bind(loc, val.as_str())?,
-        None => stat.bind_null(loc)?,
-    };
+// #[cfg(feature = "cassandra")]
+// fn opt_string(
+//     stat: &mut Statement,
+//     data: &Option<String>,
+//     loc: usize,
+// ) -> Result<(), Box<dyn std::error::Error>> {
+//     match data {
+//         Some(val) => stat.bind(loc, val.as_str())?,
+//         None => stat.bind_null(loc)?,
+//     };
 
-    Ok(())
-}
+//     Ok(())
+// }
 
-#[cfg(feature = "cassandra")]
-fn e_for_opt<T: Clone>(
-    stat: &mut Statement,
-    data: &Option<T>,
-    loc: usize,
-) -> Result<(), Box<dyn std::error::Error>>
-where
-    cassandra_cpp::Statement: BindRustType<T>,
-{
-    match data {
-        Some(val) => stat.bind(loc, val.clone())?,
-        None => stat.bind_null(loc)?,
-    };
+// #[cfg(feature = "cassandra")]
+// fn e_for_opt<T: Clone>(
+//     stat: &mut Statement,
+//     data: &Option<T>,
+//     loc: usize,
+// ) -> Result<(), Box<dyn std::error::Error>>
+// where
+//     cassandra_cpp::Statement: BindRustType<T>,
+// {
+//     match data {
+//         Some(val) => stat.bind(loc, val.clone())?,
+//         None => stat.bind_null(loc)?,
+//     };
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[derive(Serialize, Deserialize)]
 pub enum AttemptStatus {
@@ -914,3 +914,256 @@ pub struct Customer {
 // impl Customer{
 //     pub fn new(customer_id : String) -> Result<(), Box>
 // }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[charybdis_model(
+    table_name = payment_intents,
+    partition_keys = [merchant_id, payment_id],
+    clustering_keys = [],
+    global_secondary_indexes = [],
+    local_secondary_indexes = [],
+    static_columns = []
+)]
+pub struct PaymentIntent {
+    pub payment_id: String,
+    pub merchant_id: String,
+    pub status: String,
+    pub amount: i64,
+    pub currency: Option<String>,
+    pub amount_captured: Option<i64>,
+    pub customer_id: Option<String>,
+    pub description: Option<String>,
+    pub return_url: Option<String>,
+    pub metadata: Option<String>,
+    pub connector_id: Option<String>,
+    pub shipping_address_id: Option<String>,
+    pub billing_address_id: Option<String>,
+    pub statement_descriptor_name: Option<String>,
+    pub statement_descriptor_suffix: Option<String>,
+    pub created_at: Timestamp,
+    pub modified_at: Timestamp,
+    pub last_synced: Option<Timestamp>,
+    pub setup_future_usage: Option<String>,
+    pub off_session: Option<bool>,
+    pub client_secret: Option<String>,
+    pub active_attempt_id: String,
+    pub business_country: Option<String>,
+    pub business_label: Option<String>,
+    pub order_details: Option<String>,
+    pub allowed_payment_method_types: Option<String>,
+    pub connector_metadata: Option<String>,
+    pub feature_metadata: Option<String>,
+    pub attempt_count: i16,
+    pub profile_id: Option<String>,
+    // Denotes the action(approve or reject) taken by merchant in case of manual review.
+    // Manual review can occur when the transaction is marked as risky by the frm_processor, payment processor or when there is underpayment/over payment incase of crypto payment
+    pub merchant_decision: Option<String>,
+    pub payment_link_id: Option<String>,
+    pub payment_confirm_source: Option<String>,
+
+    pub updated_by: String,
+    pub surcharge_applicable: Option<bool>,
+    pub request_incremental_authorization: Option<String>,
+    pub incremental_authorization_allowed: Option<bool>,
+    pub authorization_count: Option<i32>,
+    pub session_expiry: Option<Timestamp>,
+    pub fingerprint_id: Option<String>,
+    pub request_external_three_ds_authentication: Option<bool>,
+    pub charges: Option<String>,
+    pub frm_metadata: Option<String>,
+}
+
+impl PaymentIntent{
+    pub fn new(payment_id: String) -> Result<Self, Box<dyn std::error::Error>>{
+     Ok(
+        PaymentIntent {
+            payment_id: payment_id,
+            merchant_id: "kaps".to_string(),
+            status: "Processing".to_string(),
+            amount: 1234_i64,
+            currency: Some("USD".to_string()),
+            amount_captured: None,
+            customer_id: None,
+            description: Some("randomeString12412953w23421".to_owned()),
+            return_url: Some("randomeString12412953w23421".to_owned()),
+            metadata: None,
+            connector_id: Some("randomeString12412953w23421".to_owned()),
+            shipping_address_id: Some("randomeString12412953w23421".to_owned()),
+            billing_address_id: Some("randomeString12412953w23421".to_owned()),
+            statement_descriptor_name: Some("randomeString12412953w23421".to_owned()),
+            statement_descriptor_suffix: Some("randomeString12412953w23421".to_owned()),
+            created_at: chrono::DateTime::default(),
+            modified_at: chrono::DateTime::default(),
+            last_synced: Some(chrono::DateTime::default()),
+            setup_future_usage: Some(String::from("OffSession")),
+            off_session: Some(false),
+            client_secret: Some("randomeString12412953w23421".to_owned()),
+            active_attempt_id: "asdasdas".to_string(),
+
+            business_country: None,
+            business_label: Some("randomeString12412953w23421".to_owned()),
+            order_details: None, //Option<Vec<pii::SecretSerdeValue>>,
+            allowed_payment_method_types: None, //Value
+            connector_metadata: Some(serde_json::to_string(&get_large_value())?.into()), //Value
+            feature_metadata: Some(serde_json::to_string(&get_large_value())?.into()), //Value
+            attempt_count: i16::MAX,
+            profile_id: Some("randomeString12412953w23421".to_owned()),
+            merchant_decision: Some("randomeString12412953w23421".to_owned()),
+            payment_link_id: Some("randomeString12412953w23421".to_owned()),
+            payment_confirm_source: None,
+            updated_by: "asdasds".to_string(),
+
+            surcharge_applicable: Some(false),
+            request_incremental_authorization: None,
+            incremental_authorization_allowed: Some(false),
+            authorization_count: None,
+            session_expiry: Some(chrono::DateTime::default()),
+            fingerprint_id: Some("randomeString12412953w23421".to_owned()),
+            request_external_three_ds_authentication: Some(false),
+            charges: None,      //Option<pii::SecretSerdeValue>,
+            frm_metadata: None, //Option<pii::SecretSerdeValue>,
+        }
+     )   
+    }
+}
+
+
+#[derive(Serialize, Deserialize)]
+#[charybdis_model(
+    table_name = payment_attempts,
+    partition_keys = [merchant_id, payment_id],
+    clustering_keys = [attempt_id],
+    global_secondary_indexes = [],
+    local_secondary_indexes = [],
+    static_columns = []
+)]
+pub struct PaymentAttempt {
+    pub payment_id: String,
+    pub merchant_id: String,
+    pub attempt_id: String,
+    pub status: String,
+    pub amount: i64,
+    pub currency: Option<String>,
+    pub save_to_locker: Option<bool>,
+    pub connector: Option<String>,
+    pub error_message: Option<String>,
+    pub offer_amount: Option<i64>,
+    pub surcharge_amount: Option<i64>,
+    pub tax_amount: Option<i64>,
+    pub payment_method_id: Option<String>,
+    pub payment_method: Option<String>,
+    pub connector_transaction_id: Option<String>,
+    pub capture_method: Option<String>,
+    pub capture_on: Option<Timestamp>,
+    pub confirm: bool,
+    pub authentication_type: Option<String>,
+    pub created_at: Timestamp,
+    pub modified_at: Timestamp,
+    pub last_synced: Option<Timestamp>,
+    pub cancellation_reason: Option<String>,
+    pub amount_to_capture: Option<i64>,
+    pub mandate_id: Option<String>,
+    pub browser_info: Option<String>,
+    pub error_code: Option<String>,
+    pub payment_token: Option<String>,
+    //TODO: check cql map type conversion
+    pub connector_metadata: Option<String>,
+    pub payment_experience: Option<String>,
+    pub payment_method_type: Option<String>,
+    pub payment_method_data: Option<String>,
+    pub business_sub_label: Option<String>,
+    pub straight_through_algorithm: Option<String>,
+    pub preprocessing_step_id: Option<String>,
+    // providing a location to store mandate details intermediately for transaction
+    pub mandate_details: Option<String>,
+    pub error_reason: Option<String>,
+    pub multiple_capture_count: Option<i16>,
+    // reference to the payment at connector side
+    pub connector_response_reference_id: Option<String>,
+    pub amount_capturable: i64,
+    pub updated_by: String,
+    pub merchant_connector_id: Option<String>,
+    pub authentication_data: Option<String>,
+    pub encoded_data: Option<String>,
+    pub unified_code: Option<String>,
+    pub unified_message: Option<String>,
+    pub net_amount: Option<i64>,
+    pub external_three_ds_authentication_attempted: Option<bool>,
+    pub authentication_connector: Option<String>,
+    pub authentication_id: Option<String>,
+    pub mandate_data: Option<String>,
+    pub fingerprint_id: Option<String>,
+    pub payment_method_billing_address_id: Option<String>,
+    pub charge_id: Option<String>,
+    pub client_source: Option<String>,
+    pub client_version: Option<String>,
+}
+
+impl PaymentAttempt{
+    pub fn new(i: String, version: String) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self {
+            payment_id: i.clone(),
+            merchant_id: "kaps".to_owned(),
+            attempt_id: version,
+            status: "AuthenticationFailed".to_string(),
+            amount: i64::MAX,
+            currency: Some("USD".to_owned()),
+            save_to_locker: Some(false),
+            connector: Some("randomeString12412953w23421".to_owned()),
+            error_message: Some("randomeString12412953w23421".to_owned()),
+            offer_amount: Some(i64::MAX),
+            surcharge_amount: Some(i64::MAX),
+            tax_amount: Some(i64::MAX),
+            payment_method_id: Some("randomeString12412953w23421".to_owned()),
+            payment_method: Some("CARD".to_owned()),
+            connector_transaction_id: Some("randomeString12412953w23421".to_owned()),
+            capture_method: Some("automatic".to_owned()),
+            //#[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+            capture_on: Some(chrono::DateTime::default()),
+            confirm: true,
+            authentication_type: Some("NO_THREE_DS".to_owned()),
+            //#[serde(with = "common_utils::custom_serde::iso8601")]
+            created_at: chrono::DateTime::default(),
+            // #[serde(with = "common_utils::custom_serde::iso8601")]
+            modified_at: chrono::DateTime::default(),
+            //#[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+            last_synced: Some(chrono::DateTime::default()),
+            cancellation_reason: Some("randomeString12412953w23421".to_owned()),
+            amount_to_capture: Some(i64::MAX),
+            mandate_id: Some("randomeString12412953w23421".to_owned()),
+            browser_info: None,
+            error_code: Some("randomeString12412953w23421".to_owned()),
+            payment_token: Some("randomeString12412953w23421".to_owned()),
+            connector_metadata: Some(serde_json::to_string(&get_large_value())?.into()), //Value
+            payment_experience: None,
+            payment_method_type: None,
+            payment_method_data: Some(serde_json::to_string(&get_large_value())?.into()), //Value
+            business_sub_label: Some("randomeString12412953w23421".to_owned()),
+            straight_through_algorithm: None,
+            preprocessing_step_id: Some("randomeString12412953w23421".to_owned()),
+            // providing a location to store mandate details intermediately for transaction
+            mandate_details: None,
+            error_reason: Some("randomeString12412953w23421".to_owned()),
+            multiple_capture_count: None,
+            // reference to the payment at connector side
+            connector_response_reference_id: Some("randomeString12412953w23421".to_owned()),
+            amount_capturable: i64::MAX,
+            updated_by: "foo".to_owned(),
+
+            merchant_connector_id: Some("randomeString12412953w23421".to_owned()),
+            authentication_data: Some(serde_json::to_string(&get_large_value())?.into()), //Value
+            encoded_data: Some("randomeString12412953w23421".to_owned()),
+            unified_code: Some("randomeString12412953w23421".to_owned()),
+            unified_message: Some("randomeString12412953w23421".to_owned()),
+            net_amount: Some(i64::MAX),
+            external_three_ds_authentication_attempted: None,
+            authentication_connector: Some("randomeString12412953w23421".to_owned()),
+            authentication_id: Some("randomeString12412953w23421".to_owned()),
+            mandate_data: None,
+            fingerprint_id: Some("randomeString12412953w23421".to_owned()),
+            payment_method_billing_address_id: Some("randomeString12412953w23421".to_owned()),
+            charge_id: Some("randomeString12412953w23421".to_owned()),
+            client_source: Some("randomeString12412953w23421".to_owned()),
+            client_version: Some("randomeString12412953w23421".to_owned()),
+        })
+    }
+}

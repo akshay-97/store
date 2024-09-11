@@ -99,16 +99,16 @@ impl CassClient {
         let username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
         let datacenter = env::var("CASSANDRA_DC").context("datacenter not configured")?;
         set_level(LogLevel::DEBUG);
-        let mut cluster = Cluster::default();
-        cluster
-            .set_contact_points(&url)?
-            .set_port(port)?
-            .set_credentials(&username, &password)?
-            .set_load_balance_round_robin();
+        // let mut cluster = Cluster::default();
+        // cluster
+        //     .set_contact_points(&url)?
+        //     .set_port(port)?
+        //     .set_credentials(&username, &password)?
+        //     .set_load_balance_round_robin();
         
-        cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
+        // cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
-        let session = cluster.connect().await?;
+        // let session = cluster.connect().await?;
         let cert_url = env::var("CASS_CERT_URL").context("CASSANDRA CERT URL NOT FOUND")?;
         let acc_keyspace = env::var("ACC_KEYSPACE").context("accounts keyspace not found")?;
         let scylla_url : Vec<String>= url.split(',').map(|ip| format!("{}:{}", ip, port)).collect();
@@ -117,6 +117,7 @@ impl CassClient {
         let mut context_builder = SslContextBuilder::new(SslMethod::tls())?;
         context_builder.set_certificate_file(certdir.as_path(), SslFiletype::PEM)?;
         context_builder.set_verify(SslVerifyMode::NONE);
+        //context_builder.set_hostname(url)?;
 
 
         let scylla_session = scylla::SessionBuilder::new()
