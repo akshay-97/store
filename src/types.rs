@@ -963,7 +963,7 @@ pub struct PaymentIntent {
     pub payment_confirm_source: Option<String>,
 
     pub updated_by: String,
-    pub surcharge_applicable: Option<bool>,
+    pub surcharge_applicable: Option<String>,
     pub request_incremental_authorization: Option<String>,
     pub incremental_authorization_allowed: Option<bool>,
     pub authorization_count: Option<i32>,
@@ -1014,7 +1014,7 @@ impl PaymentIntent{
             payment_confirm_source: None,
             updated_by: "asdasds".to_string(),
 
-            surcharge_applicable: Some(false),
+            surcharge_applicable: Some("false".to_string()),
             request_incremental_authorization: None,
             incremental_authorization_allowed: Some(false),
             authorization_count: None,
@@ -1067,7 +1067,7 @@ impl Default for PaymentIntent {
             payment_confirm_source: None,
             updated_by: "asdasds".to_string(),
 
-            surcharge_applicable: Some(false),
+            surcharge_applicable: Some("false".to_string()),
             request_incremental_authorization: None,
             incremental_authorization_allowed: Some(false),
             authorization_count: None,
