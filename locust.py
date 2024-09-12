@@ -22,25 +22,25 @@ class PaymentsBehaviour(SequentialTaskSet):
     def intent_create(self):
         payment_id = self.gen()
         self.payment_id = payment_id
-        response = self.client.get('/create/' + self.payment_id + '/kaps', name = "IntentCreate")
+        response = self.client.get('/create/' + self.payment_id + '/kaps', name = "IntentCreate",allow_redirects=True)
         if response.status_code == 200:
             config_set['pi'].append(payment_id)
     @task(1)
     def pay(self):
         for i in range(1):
             self.attempt_version[i] = self.payment_id + 'version' + str(i)
-            response = self.client.get('/pay/' + self.payment_id + '/' + self.attempt_version[i], name = "AttemptCreate")
+            response = self.client.get('/pay/' + self.payment_id + '/' + self.attempt_version[i], name = "AttemptCreate",allow_redirects=True)
             if response.status_code == 200:
                 config_set['pa'].append(self.payment_id + ',' + self.attempt_version[i] + '\n')
     @task(1)
     def update_attempt(self):
         for i in range(len(self.attempt_version)):
             if self.attempt_version[i] is not None:
-                response = self.client.get('/update_attempt/pay/' + self.attempt_version[i] + '/' + self.payment_id , name = "UpdateAttempt")
+                response = self.client.get('/update_attempt/pay/' + self.attempt_version[i] + '/' + self.payment_id , name = "UpdateAttempt",allow_redirects=True)
     
     @task(1)
     def update_intent(self):
-        response = self.client.get('/update_intent/' + self.payment_id, name = "UpdateIntent")
+        response = self.client.get('/update_intent/' + self.payment_id, name = "UpdateIntent",allow_redirects=True)
     
     # @task(1)
     # def retrieve_attempt(self):
@@ -48,7 +48,7 @@ class PaymentsBehaviour(SequentialTaskSet):
     
     @task(1)
     def retrieve_intent(self):
-        response = self.client.get('/retrieve/payment_intent/' + self.payment_id, name = "RetrieveIntent")
+        response = self.client.get('/retrieve/payment_intent/' + self.payment_id, name = "RetrieveIntent",allow_redirects=True)
 
 def make():
     return type("MyClass", (PaymentsBehaviour,), {})

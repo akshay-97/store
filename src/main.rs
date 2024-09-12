@@ -6,12 +6,16 @@ mod types;
 mod utils;
 mod time;
 
-use axum::{response::IntoResponse, routing::get};
+use axum::{http::{HeaderMap, HeaderValue}, middleware::{self, Next}, response::IntoResponse, routing::get};
 use tokio::net::TcpListener;
 use crate::store::App;
 use axum::extract::{State, Path};
 use axum::http::StatusCode;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle, Matcher};
+use axum::extract::Request;
+use axum::response::Response;
+
+const cell: &'static str = env!("CELL", "couldnt find cell env");
 
 fn metrics_app() -> axum::Router {
     let recorder_handle = setup_metrics_recorder();
@@ -60,12 +64,20 @@ async fn start_app(){
         .route("/retrieve/payment_attempt/:payment_id", get(retrieve_attempt))
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
         .with_state(store)
-        .route("/health", get(|| async { "OK"}));
+        .route("/health", get(|| async { "OK"}))
+        .route_layer(middleware::from_fn(inject_header));
     axum::serve(
         TcpListener::bind((server_host
                                 , server_port.parse::<u16>().context("invalid server port").expect("invalid server port"))).await.expect("port binding failed"),
         router).await.unwrap()
 }
+
+async fn inject_header(_headers : HeaderMap, request : Request , next : Next) -> Response{
+    let mut res = next.run(request).await;
+    res.headers_mut().insert("x-region", HeaderValue::from_static(cell));
+    res
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (_, _) = tokio::join!(start_metrics_server(), start_app());
