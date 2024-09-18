@@ -1,6 +1,7 @@
 use crate::store::RedisClient;
 use crate::types::*;
 use anyhow::Context;
+use axum::response::IntoResponse;
 
 #[cfg(feature = "cassandra")]
 use crate::store::CassClient;
@@ -11,7 +12,7 @@ use fred::prelude::{HashesInterface, ServerInterface};
 use futures::{lock, StreamExt};
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
-    async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>>;
+    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
     async fn retrieve_intent<'a>(
         &self,
         payment_id: &'a str,
@@ -28,7 +29,7 @@ pub trait PaymentAttemptInterface {
         &self,
         payment_id: String,
         version: String,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>>;
     async fn retrieve_all<'a>(&self, payment_id: &'a str)
         -> Result<(), Box<dyn std::error::Error>>;
     async fn update_attempt<'a>(
@@ -110,12 +111,13 @@ impl PaymentAttemptInterface for CassClient {
         &self,
         payment_id: String,
         version: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>> {
         let mut statement = self.cassandra_session.statement(insert_attempt_cql());
         let _= statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
-        PaymentAttempt::new(payment_id,version).populate_statement(&mut statement)?;
+        let pa = PaymentAttempt::new(payment_id,version);
+        (&pa).populate_statement(&mut statement)?;
         let _rows = crate::utils::time_wrapper(statement.execute(), "payment_attempt", "CREATE").await?;
-        Ok(())
+        Ok(PaymentAttemptResponse { pa: pa.attempt_id })
     }
 
     async fn retrieve_all<'a>(
@@ -176,10 +178,11 @@ fn retrieve_payment_cql() -> String {
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for CassClient {
-    async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>> {
         let mut statement = self.cassandra_session.statement(insert_intent_cql());
 
-        PaymentIntent::new(payment_id).populate_statement(&mut statement)?;
+        let pi = PaymentIntent::new(payment_id);
+        (&pi).populate_statement(&mut statement)?;
 
         //println!("what is statement {:?} ", statement);
         statement.set_consistency(cassandra_cpp::Consistency::ONE)?;
@@ -188,7 +191,7 @@ impl PaymentIntentInterface for CassClient {
                 println!("intent create error {}", e.to_string());
                 e
             })?;
-        Ok(())
+        Ok(PaymentIntentResponse{pi : pi.payment_id})
     }
 
     async fn retrieve_intent<'a>(
@@ -227,6 +230,7 @@ impl PaymentIntentInterface for CassClient {
     }
 }
 
+#[cfg(feature = "redis")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for RedisClient {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
@@ -300,6 +304,7 @@ impl PaymentIntentInterface for RedisClient {
     }
 }
 
+#[cfg(feature = "redis")]
 #[async_trait::async_trait]
 impl PaymentAttemptInterface for RedisClient {
     async fn create_attempt(

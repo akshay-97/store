@@ -25,7 +25,7 @@ fn setup_metrics_recorder() -> PrometheusHandle {
 
     PrometheusBuilder::new()
         .set_buckets_for_metric(
-            Matcher::Full("latency_tracker".to_string()),
+            Matcher::Full("latency_tracker_r".to_string()),
             EXPONENTIAL_SECONDS,
         )
         .unwrap()
@@ -84,14 +84,14 @@ async fn create_account(State(app) : State<App>, Path(merchant_id): Path<String>
 
 async fn create_payment(State(app) : State<App> , Path((payment_id, merchant_id)): Path<(String, String)>) -> Result<impl IntoResponse , DB_ERR>{
     let _ = app.db.retrieve_account(merchant_id).await.map_err(|e| DB_ERR(e.to_string()))?;
-    let _ = app.db.create_intent(payment_id).await.map_err(|e| DB_ERR(e.to_string()))?;
-    Ok(axum::Json(()))
+    let res = app.db.create_intent(payment_id).await.map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(res))
 }
 
 async fn pay(State(app) : State<App> ,Path((payment_id,version)): Path<(String,String)>) -> Result<impl IntoResponse , DB_ERR>{
     let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|e| DB_ERR(e.to_string()))?;
-    let _ = app.db.create_attempt(payment_id, version).await.map_err(|e| DB_ERR(e.to_string()))?;
-    Ok(axum::Json(()))
+    let res = app.db.create_attempt(payment_id, version).await.map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(res))
 }
 async fn update_attempt(State(app) : State<App> , Path((version, payment_attempt_id)): Path<(String,String)>) -> Result<impl IntoResponse , DB_ERR>{
     let _ = app.db.update_attempt(payment_attempt_id.as_ref(), version).await.map_err(|e| DB_ERR(e.to_string()))?;
