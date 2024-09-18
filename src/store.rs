@@ -120,11 +120,16 @@ impl CassClient {
         //context_builder.set_hostname(url)?;
 
 
-        let scylla_session = scylla::SessionBuilder::new()
-            .known_nodes(scylla_url.clone())
-            .ssl_context(Some(context_builder.build()))
-            .user(username.clone(), password.clone())
-            .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter.clone())))
+        let mut scylla_session = scylla::SessionBuilder::new()
+            .known_nodes(scylla_url.clone());
+
+        #[cfg(feature="keyspaces")]
+        {
+            scylla_session = scylla_session
+                .ssl_context(Some(context_builder.build()))
+                .user(username.clone(), password.clone());
+        }     
+        let updated_acc_session = scylla_session.host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter.clone())))
             .use_keyspace(acc_keyspace, false)
             .build()
             .await?;
@@ -132,16 +137,20 @@ impl CassClient {
         let mut context_builder_r = SslContextBuilder::new(SslMethod::tls())?;
         context_builder_r.set_certificate_file(certdir.as_path(), SslFiletype::PEM)?;
         context_builder_r.set_verify(SslVerifyMode::NONE);
-        let p_session = scylla::SessionBuilder::new()
-            .known_nodes(scylla_url)
-            .ssl_context(Some(context_builder_r.build()))
-            .user(username, password)
-            .host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
+
+        let mut p_session = scylla::SessionBuilder::new()
+            .known_nodes(scylla_url);
+        #[cfg(feature="keyspaces")]
+        {   p_session = p_session
+                .ssl_context(Some(context_builder_r.build()))
+                .user(username, password);
+        }    
+        let updated_session = p_session.host_filter(Arc::new(scylla::host_filter::DcHostFilter::new(datacenter)))
             .use_keyspace("payments", false)
             .build()
             .await?;
-        let caching_session: CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(scylla_session, 1024usize);
-        let payment_session : CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(p_session, 1024usize);
+        let caching_session: CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(updated_acc_session, 1024usize);
+        let payment_session : CachingSession<std::collections::hash_map::RandomState> = CachingSession::from(updated_session, 1024usize);
         Ok(Self {
             cassandra_session: Arc::new(payment_session),
             account_session: Arc::new(caching_session),
