@@ -29,7 +29,7 @@ fn setup_metrics_recorder() -> PrometheusHandle {
 
     PrometheusBuilder::new()
         .set_buckets_for_metric(
-            Matcher::Full("latency_tracker".to_string()),
+            Matcher::Full("latency_tracker_r".to_string()),
             EXPONENTIAL_SECONDS,
         )
         .unwrap()
@@ -49,9 +49,25 @@ async fn start_metrics_server() {
 
 async fn start_app(){
     let store = App::create_state().await.expect("state creation failed");
+    let owner = metrics::counter!("OWNER_CHANGED", "region" => crate::types::cell);
 
     let server_host = env::var("SERVER_HOST").unwrap_or("localhost".to_string());
     let server_port = env::var("SERVER_PORT").unwrap_or("8000".to_string());
+
+    let trace = tower::ServiceBuilder::new().layer(
+        tower_http::trace::TraceLayer::new_for_http().on_request(
+            move |req: &hyper::Request<axum::body::Body>, _: &tracing::Span| {
+                if req
+                    .headers()
+                    .get("x-region")
+                    .map(|val| val != crate::types::cell)
+                    .unwrap_or_default()
+                {
+                    owner.increment(1);
+                }
+            },
+        )
+    );
 
     let router = axum::Router::new()
         .route("/init_db", get(init_db))
@@ -65,18 +81,13 @@ async fn start_app(){
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
         .with_state(store)
         .route("/health", get(|| async { "OK"}))
-        .route_layer(middleware::from_fn(inject_header));
+        .layer(trace);
     axum::serve(
         TcpListener::bind((server_host
                                 , server_port.parse::<u16>().context("invalid server port").expect("invalid server port"))).await.expect("port binding failed"),
         router).await.unwrap()
 }
 
-async fn inject_header(_headers : HeaderMap, request : Request , next : Next) -> Response{
-    let mut res = next.run(request).await;
-    res.headers_mut().insert("x-region", HeaderValue::from_static(cell));
-    res
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -96,14 +107,14 @@ async fn create_account(State(app) : State<App>, Path(merchant_id): Path<String>
 
 async fn create_payment(State(app) : State<App> , Path((payment_id, merchant_id)): Path<(String, String)>) -> Result<impl IntoResponse , DB_ERR>{
     let _ = app.db.retrieve_account(merchant_id).await.map_err(|e| DB_ERR(e.to_string()))?;
-    let _ = app.db.create_intent(payment_id).await.map_err(|e| DB_ERR(e.to_string()))?;
-    Ok(axum::Json(()))
+    let res = app.db.create_intent(payment_id).await.map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(res))
 }
 
 async fn pay(State(app) : State<App> ,Path((payment_id,version)): Path<(String,String)>) -> Result<impl IntoResponse , DB_ERR>{
     let _ = app.db.retrieve_intent(payment_id.as_ref()).await.map_err(|e| DB_ERR(e.to_string()))?;
-    let _ = app.db.create_attempt(payment_id, version).await.map_err(|e| DB_ERR(e.to_string()))?;
-    Ok(axum::Json(()))
+    let res = app.db.create_attempt(payment_id, version).await.map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(res))
 }
 async fn update_attempt(State(app) : State<App> , Path((version, payment_attempt_id)): Path<(String,String)>) -> Result<impl IntoResponse , DB_ERR>{
     let _ = app.db.update_attempt(payment_attempt_id.as_ref(), version).await.map_err(|e| DB_ERR(e.to_string()))?;

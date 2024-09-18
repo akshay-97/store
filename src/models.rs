@@ -1,6 +1,7 @@
 use crate::store::RedisClient;
 use crate::types::*;
 use anyhow::Context;
+use axum::response::IntoResponse;
 
 #[cfg(feature = "cassandra")]
 use crate::store::CassClient;
@@ -11,7 +12,7 @@ use fred::prelude::{HashesInterface, ServerInterface};
 use futures::{lock, StreamExt};
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
-    async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>>;
+    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
     async fn retrieve_intent<'a>(
         &self,
         payment_id: &'a str,
@@ -28,7 +29,7 @@ pub trait PaymentAttemptInterface {
         &self,
         payment_id: String,
         version: String,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>>;
     async fn retrieve_all<'a>(&self, payment_id: &'a str)
         -> Result<(), Box<dyn std::error::Error>>;
     async fn update_attempt<'a>(
@@ -92,13 +93,13 @@ impl MerchantAccountInterface for CassClient {
     async fn create_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
         let account = MerchantAccount::new(merchant_id)?;
         let query = account.insert();
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "CREATE").await?;
+        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "CREATE", None).await?;
         Ok(())
     }
 
     async fn retrieve_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
         let query = MerchantAccount::find_by_merchant_id(merchant_id).consistency(Consistency::LocalQuorum);
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "FIND").await?;
+        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "FIND", None).await?;
         Ok(())
     }
 }
@@ -110,19 +111,19 @@ impl PaymentAttemptInterface for CassClient {
         &self,
         payment_id: String,
         version: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>> {
         let p_a = PaymentAttempt::new(payment_id, version)?;
         let query = p_a.insert();
-        let _result = crate::utils::time_wrapper(query.execute(&self.cassandra_session.as_ref()), "payment_attempts", "CREATE").await?;
-        Ok(())
+        let _result = crate::utils::time_wrapper(query.execute(&self.cassandra_session.as_ref()), "payment_attempts", "CREATE", Some(p_a.attempt_id.clone())).await?;
+        Ok(PaymentAttemptResponse { pa: p_a.attempt_id })
     }
-
+    
     async fn retrieve_all<'a>(
         &self,
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let query = PaymentAttempt::find_by_merchant_id_and_payment_id("kaps".to_owned(), payment_id.to_owned());
-        let result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_attempts", "FIND_ALL").await?;
+        let result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_attempts", "FIND_ALL",Some(payment_id.to_owned())).await?;
         let ver = result.try_collect().await?.is_empty();
         if ver{
             return Err(
@@ -137,7 +138,7 @@ impl PaymentAttemptInterface for CassClient {
         version: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let update = UpdateMetadataPaymentAttempt {merchant_id : "kaps".to_string(), payment_id : payment_intent_id.to_owned(), attempt_id : version, connector_metadata : Some("AAAAB3NzaC1yc2EAAAADAQABAAACAQC+gCy875BbJDjy/KDczr84xswL1edCE82IkOCBeYuOPbmhR251K9r7UFjlXioa5UnMpRals/pMSkz9MF7yUTzPDg+NjfmsZ8rgHqTKJ7z/yUWEyxd3TcUh0xkkYMCfrA+9rLqgolBiasAOApBDYTi0BsBlfAgNIaTgg7xTX7PHUzceAvujJel1Q6V+bABnFvlDu6kWUhXlrPafWRPUSQz2wEsO7vqrE9UfP+CtuXrJ+t6pMbkVDGc0+JWaPJjBXMjxljBfZHw7UVbHmPlYYTwOGD/IWOgisFfvnutR4JvDZA5elWqkXj+ZEsOw4QFXw71o+b2YWrRBa8l+AFn//zPQvLB753wQVuhzmsidToLss2DfGLdrYKVuCTX7a7OhxKDYRYeyZgeqWK8xVqiyayXgvuxcZV2g+mHi2WuUGGJ6Ycj+JZ9Vh67EnplDmJAKCFXCenS4ou9rMCHqD6i9UVgzakzxy/wd5Cj6R26uKqKo8rZDw9D6zKDzF45NbVh+obAFh/9MuzSCaaL5pXWPUI0kI7iZ8lU7rC8HAj5HhynLZd+rfQazVo+qcoQMxO+A9+fFubru41Aku6siQgv6oXNiGSOcb4bgEDlCBQ/uQgNCn9Vdq3f1yWqC1eAQtwoB4YTE2DZrY1TVZiN202JQNweIIOQUANyKRVV2ITZketmeZQ==".to_string())};
-        crate::utils::time_wrapper(update.update().execute(&self.cassandra_session), "payment_attempts", "UPDATE").await?;
+        crate::utils::time_wrapper(update.update().execute(&self.cassandra_session), "payment_attempts", "UPDATE" , Some(payment_intent_id.to_owned())).await?;
         Ok(())
     }
 
@@ -146,8 +147,8 @@ impl PaymentAttemptInterface for CassClient {
         payment_attempt_id : String,
         payment_id : String
     ) -> Result<(), Box<dyn std::error::Error>>{
-        let query = PaymentAttempt::find_by_merchant_id_and_payment_id_and_attempt_id("kaps".to_owned(), payment_id, payment_attempt_id);
-        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_attempts", "FIND").await?;
+        let query = PaymentAttempt::find_by_merchant_id_and_payment_id_and_attempt_id("kaps".to_owned(), payment_id, payment_attempt_id.clone());
+        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_attempts", "FIND", Some(payment_attempt_id)).await?;
         Ok(())
     }
 }
@@ -160,11 +161,11 @@ fn retrieve_payment_cql() -> String {
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for CassClient {
-    async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
+    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>> {
         let p_i = PaymentIntent::new(payment_id)?;
         let query = p_i.insert();
-        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "CREATE").await?;
-        Ok(())
+        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "CREATE", Some(p_i.payment_id.clone())).await?;
+        Ok(PaymentIntentResponse{pi : p_i.payment_id})
     }
 
     async fn retrieve_intent<'a>(
@@ -172,7 +173,7 @@ impl PaymentIntentInterface for CassClient {
         payment_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let query = PaymentIntent::find_by_merchant_id_and_payment_id("kaps".to_owned(), payment_id.to_owned());
-        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "FIND").await?;
+        let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "FIND", Some(payment_id.to_owned())).await?;
         Ok(())
     }
 
@@ -181,11 +182,12 @@ impl PaymentIntentInterface for CassClient {
         payment_intent_id: &'a str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let update = UpdateStatusPaymentIntent { merchant_id : "kaps".to_string(), payment_id : payment_intent_id.to_owned(), status : "NEW".to_owned()};
-        let _result = crate::utils::time_wrapper(update.update().execute(self.cassandra_session.as_ref()), "payment_intents", "UPDATE").await?;
+        let _result = crate::utils::time_wrapper(update.update().execute(self.cassandra_session.as_ref()), "payment_intents", "UPDATE", Some(payment_intent_id.to_owned())).await?;
         Ok(())
     }
 }
 
+#[cfg(feature = "redis")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for RedisClient {
     async fn create_intent(&self, payment_id: String) -> Result<(), Box<dyn std::error::Error>> {
@@ -259,6 +261,7 @@ impl PaymentIntentInterface for RedisClient {
     }
 }
 
+#[cfg(feature = "redis")]
 #[async_trait::async_trait]
 impl PaymentAttemptInterface for RedisClient {
     async fn create_attempt(

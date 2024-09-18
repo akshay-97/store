@@ -1,10 +1,12 @@
 use std::default;
+use std::time::UNIX_EPOCH;
 
 use charybdis::scylla::{CqlValue, FromCqlVal};
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
 use charybdis::macros::charybdis_model;
 use charybdis::types::{Text, Time, Timestamp};
+use chrono::Utc;
 
 // #[derive(Serialize, Deserialize)]
 // pub struct PaymentAttempt {
@@ -414,6 +416,31 @@ pub fn get_large_value() -> serde_json::Value {
         }
       ]
     })
+}
+
+impl GenerateId for PaymentIntent{
+    fn get_table_name() -> String {
+        "pai".to_string()
+    }
+
+    fn generate_id<'a>(client_identifier : &'a str) -> String {
+        let now = Utc::now().timestamp_millis();
+        let prefix = Self::get_table_name();
+        format!("{}_{}_{}_{}", cell, prefix.as_str(), now.to_string().as_str(), client_identifier)
+
+    }
+}
+
+
+impl GenerateId for PaymentAttempt{
+    fn get_table_name() -> String {
+        "paa".to_string()
+    }
+    
+    fn generate_id<'a>(client_identifier : &'a str) -> String {
+        let now = Utc::now().timestamp_millis();
+        format!("{}_{}_{}_{}", cell, Self::get_table_name().as_str(), now, client_identifier)
+    }
 }
 
 fn enum_parse<T: serde::Serialize>(em: &T) -> Result<String, Box<dyn std::error::Error>> {
@@ -978,7 +1005,7 @@ impl PaymentIntent{
     pub fn new(payment_id: String) -> Result<Self, Box<dyn std::error::Error>>{
      Ok(
         PaymentIntent {
-            payment_id: payment_id,
+            payment_id: Self::generate_id(payment_id.as_str()),
             merchant_id: "kaps".to_string(),
             status: "Processing".to_string(),
             amount: 1234_i64,
@@ -1159,7 +1186,7 @@ impl PaymentAttempt{
         Ok(Self {
             payment_id: i.clone(),
             merchant_id: "kaps".to_owned(),
-            attempt_id: version,
+            attempt_id: Self::generate_id(version.as_str()),
             status: "AuthenticationFailed".to_string(),
             amount: i64::MAX,
             currency: Some("USD".to_owned()),
@@ -1292,4 +1319,45 @@ impl Default for PaymentAttempt{
             client_version: Some("randomeString12412953w23421".to_owned()),
         }
     }
+}
+
+
+
+pub const cell: &'static str = env!("CELL", "couldnt find cell env");
+
+
+trait GenerateId{
+    fn get_table_name() -> String;
+    fn generate_id<'a>(client_identifier : &'a str) -> String;
+}
+
+// impl GenerateId for PaymentIntent{
+//     fn get_table_name() -> String {
+//         "pai".to_string()
+//     }
+//     fn generate_id<'a>(client_identifier : &'a str) -> String {
+//         let now = Utc::now().timestamp_millis();
+//         let prefix = Self::get_table_name();
+//         format!("{}_{}_{}_{}", cell, prefix.as_str(), now.to_string().as_str(), client_identifier)
+//     }
+// }
+// impl GenerateId for PaymentAttempt{
+//     fn get_table_name() -> String {
+//         "paa".to_string()
+//     }
+    
+//     fn generate_id<'a>(client_identifier : &'a str) -> String {
+//         let now = Utc::now().timestamp_millis();
+//         format!("{}_{}_{}_{}", cell, Self::get_table_name().as_str(), now, client_identifier)
+//     }
+// }
+
+
+#[derive(Serialize)]
+pub struct PaymentAttemptResponse {
+    pub pa: String
+}
+#[derive(Serialize)]
+pub struct PaymentIntentResponse {
+    pub pi : String
 }
