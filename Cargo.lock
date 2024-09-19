@@ -1484,6 +1484,7 @@ dependencies = [
  "hyper",
  "metrics",
  "metrics-exporter-prometheus",
+ "once_cell",
  "openssl",
  "rand",
  "scylla",

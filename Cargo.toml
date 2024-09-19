@@ -33,6 +33,7 @@ tower = "0.5"
 tower-http = { version = "0.5", features = ["trace"] }
 hyper = "1.4.1"
 tracing = "0.1.40"
+once_cell = "*"
 
 [profile.release]
 strip = false
