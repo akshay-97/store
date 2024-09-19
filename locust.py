@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import json
+import datetime
 
 config_set = {
    'version' : 1,
@@ -12,13 +13,13 @@ config_set = {
     'pa' : [],
  }
 
-def extract_cell(input):
-    return input.split("_")[0]
+
 
 class PaymentsBehaviour(SequentialTaskSet):
     payment_id = None
     attempt_version = [None] * 1
     cell = None
+    
     
     def gen(self):
         config_set['version'] += 1
@@ -26,28 +27,34 @@ class PaymentsBehaviour(SequentialTaskSet):
     @task(1)
     def intent_create(self):
         payment_id = self.gen()
-        self.payment_id = payment_id
-        response = self.client.get('/create/' + self.payment_id + '/kaps', name = "IntentCreate",allow_redirects=True)
+        #self.payment_id = payment_id
+        response = self.client.get('/create/' + payment_id + '/kaps', name = "IntentCreate",allow_redirects=True)
         if response.status_code == 200:
-            self.cell = extract_cell(json.loads(response.text)["pi"])
-            config_set['pi'].append(payment_id)
+            downstream_payment_id = json.loads(response.text)["pi"]
+            self.cell = downstream_payment_id.split("_")[0]
+            #self.cell = self.extract_cell(json.loads(response.text)["pi"])
+            self.payment_id = downstream_payment_id
+            config_set['pi'].append(downstream_payment_id)
+            print(self.cell, str(datetime.datetime.now()))
     @task(1)
     def pay(self):
         for i in range(1):
             self.attempt_version[i] = self.payment_id + 'version' + str(i)
-            response = self.client.get('/pay/' + self.payment_id + '/' + self.attempt_version[i], name = "AttemptCreate",allow_redirects=True, headers = {'x-region' : self.cell})
+            response = self.client.get('/pay/' + self.payment_id + '/' + self.attempt_version[i], name = "AttemptCreate" + " :" + self.cell,allow_redirects=True, headers = {'x-region' : self.cell})
             if response.status_code == 200:
-                self.cell = extract_cell(json.loads(response.text)["pa"])
+                downstream_attempt_id = json.loads(response.text)["pa"]
+                self.cell = downstream_attempt_id.split("_")[0]
+                self.attempt_version[i] = downstream_attempt_id
                 config_set['pa'].append(self.payment_id + ',' + self.attempt_version[i] + '\n')
     @task(1)
     def update_attempt(self):
         for i in range(len(self.attempt_version)):
             if self.attempt_version[i] is not None:
-                response = self.client.get('/update_attempt/pay/' + self.attempt_version[i] + '/' + self.payment_id , name = "UpdateAttempt",allow_redirects=True, headers = {'x-region' : self.cell})
+                response = self.client.get('/update_attempt/pay/' + self.attempt_version[i] + '/' + self.payment_id , name = "UpdateAttempt"+ " :" + self.cell,allow_redirects=True, headers = {'x-region' : self.cell})
     
     @task(1)
     def update_intent(self):
-        response = self.client.get('/update_intent/' + self.payment_id, name = "UpdateIntent",allow_redirects=True, headers = {'x-region' : self.cell})
+        response = self.client.get('/update_intent/' + self.payment_id, name = "UpdateIntent"+ " :" + self.cell,allow_redirects=True, headers = {'x-region' : self.cell})
     
     # @task(1)
     # def retrieve_attempt(self):
@@ -55,7 +62,7 @@ class PaymentsBehaviour(SequentialTaskSet):
     
     @task(1)
     def retrieve_intent(self):
-        response = self.client.get('/retrieve/payment_intent/' + self.payment_id, name = "RetrieveIntent",allow_redirects=True, headers = {'x-region' : self.cell})
+        response = self.client.get('/retrieve/payment_intent/' + self.payment_id, name = "RetrieveIntent"+ " :" + self.cell,allow_redirects=True, headers = {'x-region' : self.cell})
 
 def make():
     return type("MyClass", (PaymentsBehaviour,), {})
