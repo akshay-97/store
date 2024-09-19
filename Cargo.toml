@@ -27,6 +27,10 @@ metrics-exporter-prometheus = { version = "0.13", default-features = false }
 charybdis = {version = "*"}
 scylla = { version = "0.13.1", features = ["full-serialization"] }
 chrono = {version = "*"}
+tower = "0.5"
+tower-http = { version = "0.5", features = ["trace"] }
+hyper = "1.4.1"
+tracing = "0.1.40"
 
 [profile.release]
 strip = false
