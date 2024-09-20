@@ -23,8 +23,8 @@ use tokio::net::TcpListener;
 
 const cell: &'static str = env!("CELL", "couldnt find cell env");
 
-static OWNER: once_cell::sync::Lazy<metrics::Counter> =
-    once_cell::sync::Lazy::new(|| metrics::counter!("OWNER_CHANGED", "region" => cell));
+// static OWNER: once_cell::sync::Lazy<metrics::Counter> =
+//     once_cell::sync::Lazy::new(|| metrics::counter!("OWNER_CHANGED", "region" => cell));
 
 fn metrics_app() -> axum::Router {
     let recorder_handle = setup_metrics_recorder();
@@ -65,7 +65,8 @@ async fn map(req: axum::http::Request<axum::body::Body>) -> axum::http::Request<
         .map(|val| val != crate::types::cell)
         .unwrap_or_default()
     {
-        OWNER.increment(1);
+        //OWNER.increment(1);
+        metrics::counter!("OWNER_CHANGED", "region" => cell).increment(1);
     }
     req
 }
