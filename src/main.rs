@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use std::env;
+use std::str::FromStr;
 mod models;
 mod store;
 mod time;
@@ -69,6 +70,16 @@ async fn map(req: axum::http::Request<axum::body::Body>) -> axum::http::Request<
     req
 }
 
+async fn map_responsse(
+    mut res: axum::http::Response<axum::body::Body>,
+) -> axum::http::Response<axum::body::Body> {
+    res.headers_mut().insert(
+        hyper::header::HeaderName::from_static("x-region"),
+        HeaderValue::from_static(crate::types::cell),
+    );
+    res
+}
+
 async fn start_app() {
     let store = App::create_state().await.expect("state creation failed");
 
@@ -96,7 +107,8 @@ async fn start_app() {
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
         .with_state(store)
         .route("/health", get(|| async { "OK" }))
-        .layer(axum::middleware::map_request(map));
+        .layer(axum::middleware::map_request(map))
+        .layer(axum::middleware::map_response(map_responsse));
     axum::serve(
         TcpListener::bind((
             server_host,
