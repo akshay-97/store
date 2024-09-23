@@ -84,8 +84,23 @@ impl CassClient {
             .ok()
             .and_then(|x| x.parse::<u16>().ok())
             .unwrap_or(9042);
-        let password = env::var("CASSANDRA_PASSWORD").context("CASSANDRA_PASSWORD not found")?;
-        let username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
+        
+        let password;
+        let username;
+        
+        #[cfg(not(feature = "astra"))]
+        {
+            username = env::var("CASSANDRA_USERNAME").context("CASSANDRA_USERNAME not found")?;
+            password = env::var("CASSANDRA_PASSWORD").context("CASSANDRA_PASSWORD not found")?;
+        }    
+        #[cfg(feature = "astra")]{
+            username = "token";
+            password = env::var("ASTRA_DB_APPLICATION_TOKEN").context("astra password not found")?;
+
+            // username = env::var("ASTRA_CLIENT_ID").context("astra client id")?;
+            // password = env::var("ASTRA_SECRET").context("astra secret not found")?;
+        }
+       
         let datacenter = env::var("CASSANDRA_DC").context("datacenter not configured")?;
         set_level(LogLevel::DEBUG);
         let mut cluster = Cluster::default();
@@ -94,6 +109,14 @@ impl CassClient {
             .set_port(port)?
             .set_credentials(&username, &password)?
             .set_load_balance_round_robin();
+
+        #[cfg(feature = "astra")]
+        {
+            let path_to_cloud_bundle = env::var("ASTRA_CLOUD_BUNDLE_PATH").context("astra cloud bundle path not found")?;
+            cluster.set_cloud_secure_connection_bundle(path_to_cloud_bundle.as_str());
+
+        }
+        
         
         cluster.set_load_balance_dc_aware::<()>(datacenter.as_str(), 0, false)?;
 
@@ -103,17 +126,6 @@ impl CassClient {
         })
     }
 
-    // pub async fn from_conf(config: CassConfig) -> Result<Self, anyhow::Error>{
-    //     let mut cluster = Cluster::default();
-    //     let session = cluster
-    //         .set_contact_points(&config.url)?
-    //         .set_credentials(&config.username, &config.password)?
-    //         .set_load_balance_round_robin()
-    //         .connect().await?;
-    //     Ok(Self{
-    //         cassandra_session : session
-    //     })
-    // }
 }
 
 #[derive(Clone)]

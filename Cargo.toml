@@ -8,6 +8,7 @@ edition = "2021"
 default = ["redis"]
 cassandra = ["dep:cassandra-cpp"]
 redis = []
+astra = ["dep:cassandra-cpp"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
