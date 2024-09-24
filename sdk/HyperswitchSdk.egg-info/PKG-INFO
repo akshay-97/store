@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: HyperswitchSdk
+Version: 0.0.1
+Summary: A backend SDK to use hyperswitch
+Author: Michael Scott
+License: MIT
+Keywords: Payments
