@@ -1,8 +1,14 @@
+use crate::astr_conn::StargateClientManager;
 use crate::models::*;
 use anyhow::Context;
 use fred::prelude::ClientLike;
 use scylla::CachingSession;
 use std::env;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+#[cfg(feature = "astra")]
+use stargate_grpc::*;
 
 #[cfg(feature = "cassandra")]
 use cassandra_cpp::*;
@@ -45,17 +51,61 @@ impl App {
 
             #[cfg(feature = "redis")]
             db: Box::new(RedisClient::new().await?),
+
+            #[cfg(feature = "astra")]
+            db : Box::new(SGPool::new().await?),
         })
+    }
+}
+
+// #[cfg(feature = "astra")]
+// #[derive(Clone)]
+// pub struct Stargate{
+//  client : Arc<Mutex<StargateClient>>
+// }
+// use std::str::FromStr;
+// #[cfg(feature = "astra")]
+// impl Stargate {
+//     pub async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>>{
+//         let database_id = env::var("ASTRA_DB_ID").context("ASTRA DB ID not found")?;
+//         let region = env::var("ASTRA_REGION").context("ASTRA REGION NOT found")?;
+//         let token = env::var("ASTRA_DB_TOKEN").context("ASTRA_DB_TOKEN not found")?;
+//         let astra_uri = format!("https://{}-{}.apps.astra.datastax.com/stargate", database_id, region);
+    
+//         let client = StargateClient::builder()
+//                 .uri(astra_uri)?
+//                 .auth_token(AuthToken::from_str(token.as_str())?)
+//                 .tls(Some(client::default_tls_config()?))
+//                 .connect()
+//                 .await?;
+//         Ok(Stargate{client : Arc::new(Mutex::new(client))})
+
+//     }
+// }
+
+#[cfg(feature = "astra")]
+#[derive(Clone)]
+pub struct SGPool {
+    pub pool : bb8::Pool<StargateClientManager>
+}
+
+#[cfg(feature = "astra")]
+impl SGPool{
+    pub async fn new() -> std::result::Result<Self, Box<dyn std::error::Error>>{
+        let pool  = crate::astr_conn::get_pool().await?;
+        Ok(Self{ pool})
     }
 }
 
 #[cfg(feature = "cassandra")]
 use std::sync::Arc;
+#[cfg(feature = "cassandra")]
 pub struct CassClient {
     pub cassandra_session: Session,
     pub account_session: Arc<scylla::CachingSession>,
 }
 
+#[cfg(feature = "cassandra")]
 impl Clone for CassClient{
     fn clone(&self) -> Self {
         Self { cassandra_session: self.cassandra_session.clone(), account_session: Arc::clone(&self.account_session) }
@@ -81,10 +131,26 @@ impl Init for RedisClient {
     }
 }
 
+#[cfg(feature = "astra")]
+#[async_trait::async_trait]
+impl Init for SGPool {
+    async fn prepare(&self) -> std::result::Result<(), Box<dyn std::error::Error>>{
+        let mut client = self.pool.get().await.unwrap();
+        let query = Query::builder()
+            .keyspace("test")
+            .query("SELECT firstname, lastname FROM test.users;")
+            .build();
+        client.execute_query(query).await?;
+        Ok(())
+    }
+}
+
 #[cfg(feature = "cassandra")]
 impl StorageInterface for CassClient {}
 #[cfg(feature = "redis")]
 impl StorageInterface for RedisClient {}
+#[cfg(feature = "astra")]
+impl StorageInterface for SGPool {}
 
 #[cfg(feature = "cassandra")]
 impl CassClient {

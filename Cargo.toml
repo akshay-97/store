@@ -5,9 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["cassandra"]
+default = ["astra"]
 cassandra = ["dep:cassandra-cpp"]
 redis = []
+astra = ["stargate-grpc"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -24,13 +25,15 @@ async-trait = {version = "*"}
 futures = "*"
 metrics = { version = "0.22", default-features = false }
 metrics-exporter-prometheus = { version = "0.13", default-features = false }
-charybdis = {version = "*"}
+charybdis = {version = "=0.7.5"}
 scylla = { version = "0.13.1", features = ["full-serialization"] }
 chrono = {version = "*"}
 tower = "0.5"
 tower-http = { version = "0.5", features = ["trace"] }
 hyper = "1.4.1"
 tracing = "0.1.40"
+stargate-grpc = {version = "0.3", optional  = true}
+bb8 = {version = "*"}
 
 [profile.release]
 strip = false

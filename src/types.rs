@@ -2,6 +2,7 @@ use std::time::UNIX_EPOCH;
 
 use charybdis::scylla::{CqlValue, FromCqlVal};
 use serde::{Deserialize, Serialize};
+use stargate_grpc::IntoValue;
 use time::PrimitiveDateTime;
 use charybdis::macros::charybdis_model;
 use charybdis::types::{Text, Time, Timestamp};
@@ -82,6 +83,70 @@ pub struct PaymentAttempt {
 use cassandra_cpp::{BindRustType, Statement};
 
 impl PaymentAttempt {
+
+    #[cfg(feature = "astra")]
+    pub fn bind_statement(self, query: stargate_grpc::query::QueryBuilder
+        ) -> Result<stargate_grpc::query::QueryBuilder, Box<dyn std::error::Error>> {
+            Ok(query
+                .bind_ith(0, self.payment_id)
+                .bind_ith(1, self.merchant_id)
+                .bind_ith(2, self.attempt_id)
+                .bind_ith(3, enum_parse(&self.status)?)
+                .bind_ith(4, self.amount)
+                .bind_ith(5, s_opt(self.currency)?)
+                .bind_ith(6, self.save_to_locker)
+                .bind_ith(7, self.connector)
+                .bind_ith(8, self.error_message)
+                .bind_ith(9, self.offer_amount)
+                .bind_ith(10, self.surcharge_amount)
+                .bind_ith(11, self.tax_amount)
+                .bind_ith(12, self.payment_method_id)
+                .bind_ith(13, s_opt(self.payment_method)?)
+                .bind_ith(14, self.connector_transaction_id)
+                .bind_ith(15, s_opt(self.capture_method)?)
+                .bind_ith(16, s_opt(self.capture_on)?)
+                .bind_ith(17, self.confirm)
+                .bind_ith(18, s_opt(self.authentication_type)?)
+                .bind_ith(19, enum_parse(&self.created_at)?)
+                .bind_ith(20, enum_parse(&self.modified_at)?)
+                .bind_ith(21, enum_parse(&self.last_synced)?)
+                .bind_ith(22, self.cancellation_reason)
+                .bind_ith(23, self.amount_to_capture)
+                .bind_ith(24, self.mandate_id)
+                .bind_ith(25, s_opt(self.browser_info)?)
+                .bind_ith(26, self.error_code)
+                .bind_ith(27, self.payment_token)
+                .bind_ith(28, s_opt(self.connector_metadata)?)
+                .bind_ith(29, s_opt(self.payment_experience)?)
+                .bind_ith(30, s_opt(self.payment_method_type)?)
+                .bind_ith(31, s_opt(self.payment_method_data)?)
+                .bind_ith(32, self.business_sub_label)
+                .bind_ith(33, s_opt(self.straight_through_algorithm)?)
+                .bind_ith(34, self.preprocessing_step_id)
+                .bind_ith(35, s_opt(self.mandate_details)?)
+                .bind_ith(36, self.error_reason)
+                .bind_ith(37, self.multiple_capture_count)
+                .bind_ith(38, self.connector_response_reference_id)
+                .bind_ith(39, self.amount_capturable)
+                .bind_ith(40, self.updated_by)
+                .bind_ith(41, self.merchant_connector_id)
+                .bind_ith(42, s_opt(self.authentication_data)?)
+                .bind_ith(43, self.encoded_data)
+                .bind_ith(44, self.unified_code)
+                .bind_ith(45, self.unified_message)
+                .bind_ith(46, self.net_amount)
+                .bind_ith(47, self.external_three_ds_authentication_attempted)
+                .bind_ith(48, self.authentication_connector)
+                .bind_ith(49, self.authentication_id)
+                .bind_ith(50, s_opt(self.mandate_data)?)
+                .bind_ith(51, self.fingerprint_id)
+                .bind_ith(52, self.payment_method_billing_address_id)
+                .bind_ith(53, self.charge_id)
+                .bind_ith(54, self.client_source)
+                .bind_ith(55, self.client_version)
+            )
+    }
+
     #[cfg(feature = "cassandra")]
     pub fn populate_statement(
         &self,
@@ -321,6 +386,56 @@ impl PaymentIntent {
         }
     }
 
+    #[cfg(feature = "astra")]
+    pub fn bind_statement(self, query: stargate_grpc::query::QueryBuilder
+        ) -> Result<stargate_grpc::query::QueryBuilder, Box<dyn std::error::Error>> {
+            Ok(query
+                .bind_ith(0, self.payment_id)
+                .bind_ith(1, self.merchant_id)
+                .bind_ith(2, self.status)
+                .bind_ith(3, self.amount)
+                .bind_ith(4, enum_parse(&self.currency.unwrap_or(Currency::AED))?)
+                .bind_ith(5, self.amount_captured)
+                .bind_ith(6, self.customer_id)
+                .bind_ith(7, self.description)
+                .bind_ith(8, self.return_url)
+                .bind_ith(9, s_opt(self.metadata)?)
+                .bind_ith(10, self.connector_id)
+                .bind_ith(11, self.shipping_address_id)
+                .bind_ith(12, self.billing_address_id)
+                .bind_ith(13, self.statement_descriptor_name)
+                .bind_ith(14, self.statement_descriptor_suffix)
+                .bind_ith(15, enum_parse(&self.created_at)?)
+                .bind_ith(16, enum_parse(&self.modified_at)?)
+                .bind_ith(17, enum_parse(&self.last_synced)?)
+                .bind_ith(18, self.setup_future_usage)
+                .bind_ith(19, self.off_session)
+                .bind_ith(20, self.client_secret)
+                .bind_ith(21, self.active_attempt_id)
+                .bind_ith(22, self.business_country)
+                .bind_ith(23, self.business_label)
+                .bind_ith(24, s_opt(self.order_details)?)
+                .bind_ith(25, s_opt(self.allowed_payment_method_types)?)
+                .bind_ith(26, s_opt(self.connector_metadata)?)
+                .bind_ith(27,  s_opt(self.feature_metadata)?)
+                .bind_ith(28, self.attempt_count)
+                .bind_ith(29, self.profile_id)
+                .bind_ith(30, self.merchant_decision)
+                .bind_ith(31, self.payment_link_id)
+                .bind_ith(32, self.payment_confirm_source)
+                .bind_ith(33, self.updated_by)
+                .bind_ith(34, self.surcharge_applicable)
+                .bind_ith(35, self.request_incremental_authorization)
+                .bind_ith(36, self.incremental_authorization_allowed)
+                .bind_ith(37, self.authorization_count)
+                .bind_ith(38,  s_opt(self.session_expiry)?)
+                .bind_ith(39, self.fingerprint_id)
+                .bind_ith(40, self.request_external_three_ds_authentication)
+                .bind_ith(41, s_opt(self.charges)?)
+                .bind_ith(42, s_opt(self.frm_metadata)?)
+        )
+    }
+
     #[cfg(feature = "cassandra")]
     pub fn populate_statement(
         &self,
@@ -450,7 +565,7 @@ impl GenerateId for PaymentAttempt{
     }
 }
 
-fn enum_parse<T: serde::Serialize>(em: &T) -> Result<String, Box<dyn std::error::Error>> {
+pub fn enum_parse<T: serde::Serialize>(em: &T) -> Result<String, Box<dyn std::error::Error>> {
     Ok(serde_json::to_string(em)?)
 }
 
@@ -960,4 +1075,19 @@ pub struct PaymentAttemptResponse {
 #[derive(Serialize)]
 pub struct PaymentIntentResponse {
     pub pi : String
+}
+
+
+fn opt<T: Default>(d : Option<T>) -> T{
+    if let Some(v) = d {
+        return v
+    }
+    return T::default()
+}
+
+fn s_opt<T:Serialize>(d : Option<T>) -> Result<String,Box<dyn std::error::Error>> {
+    if let Some(v) = d {
+        return serde_json::to_string(&v).map_err(|e| e.into())
+    }
+    return Ok("".to_owned())
 }

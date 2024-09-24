@@ -2,6 +2,7 @@ use crate::store::RedisClient;
 use crate::types::*;
 use anyhow::Context;
 use axum::response::IntoResponse;
+use stargate_grpc::query::QueryBuilder;
 
 #[cfg(feature = "cassandra")]
 use crate::store::CassClient;
@@ -82,12 +83,13 @@ fn update_intent_cql() -> String {
 }
 
 fn retrieve_by_id() -> String{
-    "SELECT * from payments.payment_attempts WHERE payment_id = ? AND merchant_id = ? AND payment_attempt_id = ?;".to_string()
+    "SELECT * from payments.payment_attempts WHERE payment_id = ? AND merchant_id = ? AND attempt_id = ?;".to_string()
 }
 
 #[cfg(feature = "cassandra")]
 use charybdis::operations::Insert;
 use charybdis::options::Consistency;
+#[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl MerchantAccountInterface for CassClient {
     async fn create_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
@@ -100,7 +102,132 @@ impl MerchantAccountInterface for CassClient {
     async fn retrieve_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
         let query = MerchantAccount::find_by_merchant_id(merchant_id).consistency(Consistency::LocalQuorum);
         let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "FIND").await?;
+    }
+}
+#[cfg(feature = "astra")]
+#[async_trait::async_trait]
+impl MerchantAccountInterface for crate::store::SGPool{
+    async fn create_account(
+        &self,
+        merchant_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>> {Ok(())}
+
+    async fn retrieve_account(
+        &self,
+        merchant_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>> {Ok(())}
+
+}
+
+#[cfg(feature = "astra")]
+#[async_trait::async_trait]
+impl PaymentIntentInterface for crate::store::SGPool {
+    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder().keyspace("payments").query(insert_intent_cql().as_str());
+        let pi = PaymentIntent::new(payment_id);
+        let payment_id = pi.payment_id.clone();
+
+        let updated_query = pi.bind_statement(query)?.build();
+        let mut client = self.pool.get().await.unwrap();
+
+        client.execute_query(updated_query).await?;
+        
+        Ok(PaymentIntentResponse{pi : payment_id})
+    }
+    async fn retrieve_intent<'a>(
+        &self,
+        payment_id: &'a str,
+    ) -> Result<(), Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .query(retrieve_payment_cql().as_str())
+                        .bind((payment_id, "kaps"))
+                        .build();
+        
+        let mut client = self.pool.get().await.unwrap();
+        client.execute_query(query).await?;
         Ok(())
+    }
+    async fn update_intent<'a>(
+        &self,
+        payment_id: &'a str,
+    ) -> Result<(), Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .query(update_intent_cql().as_str())
+                        .bind(("SUCCESS",payment_id, "kaps"))
+                        .build();
+        let mut client = self.pool.get().await.unwrap();
+        client.execute_query(query).await?;           
+        
+        Ok(())
+    }
+}
+
+#[cfg(feature = "astra")]
+#[async_trait::async_trait]
+impl PaymentAttemptInterface for crate::store::SGPool{
+    async fn create_attempt(
+        &self,
+        payment_id: String,
+        version: String,
+    ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder().keyspace("payments").query(insert_attempt_cql().as_str());
+        let pa = PaymentAttempt::new(payment_id , version);
+        let payment_attempt_id = pa.attempt_id.clone();
+        
+        let updated_query = pa.bind_statement(query)?.build();
+
+        let mut client = self.pool.get().await.unwrap();
+        client.execute_query(updated_query).await?; 
+
+        Ok(PaymentAttemptResponse { pa: payment_attempt_id })
+
+    }
+    
+    async fn retrieve_all<'a>(&self, payment_id: &'a str)
+        -> Result<(), Box<dyn std::error::Error>>{
+     let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .query(select_payment_attempt_all().as_str())
+                        .bind((payment_id, "kaps"))
+                        .build();
+        
+        let mut client = self.pool.get().await.unwrap();
+        client.execute_query(query).await?;
+        Ok(())
+    }
+
+    async fn update_attempt<'a>(
+        &self,
+        payment_id: &'a str,
+        version: String,
+    ) -> Result<(), Box<dyn std::error::Error>>{
+     let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .query(update_attempt_cql().as_str())
+                        .bind((enum_parse(&get_large_value())?, payment_id, "kaps", version))
+                        .build();
+        
+        let mut client = self.pool.get().await.unwrap();
+        client.execute_query(query).await?;
+        Ok(())
+    }
+
+    async fn retrieve_by_id(
+        &self,
+        payment_attempt_id : String,
+        payment_id : String
+    ) -> Result<(), Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .query(retrieve_by_id().as_str())
+                        .bind((payment_id, "kaps", payment_attempt_id))
+                        .build();
+        
+        let mut client = self.pool.get().await.unwrap();
+        client.execute_query(query).await?;
+        Ok(())    
     }
 }
 

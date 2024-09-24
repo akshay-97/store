@@ -5,6 +5,7 @@ mod store;
 mod time;
 mod types;
 mod utils;
+mod astr_conn;
 
 use crate::store::App;
 use axum::extract::{Path, State};
@@ -110,8 +111,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn init_db(State(app): State<App>) -> Result<impl IntoResponse, String> {
-    let _ = app.db.prepare().await.map_err(|_| "init failed")?;
+async fn init_db(State(app) : State<App>) -> Result<impl IntoResponse, String>{
+    let _ = app.db.prepare().await.map_err(|e| e.to_string())?;
     Ok(axum::Json(()))
 }
 async fn create_account(
