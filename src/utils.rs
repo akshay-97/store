@@ -8,9 +8,11 @@ where
     let result = func.await;
     let time_spent = start.elapsed();
     ident.map(|some| {
+        #[cfg(not(feature = "replicate"))]
         println!("{} {} {} {}", crate::types::cell, model_name, some , op);
     });
    
+    #[cfg(not(feature = "replicate"))]
     metrics::histogram!("latency_tracker_r", &[("model", model_name.to_string()), ("operation", op.to_string()), ("cell", crate::types::cell.to_string())]).record(time_spent.as_secs_f64() * (1000 as f64));
     result
 }

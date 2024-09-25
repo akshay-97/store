@@ -156,11 +156,13 @@ async fn record_lag(State(app) : State<App>, Path((pid, init_time)) : Path<(Stri
 async fn record_pi_lag(init_time: String, pid : String, app : App) -> Result<(),String>{
     let mut retry_count =0;
     loop{
-        if retry_count == 10{
+        if retry_count == 100{
+            println!("retry exceeded");
             return Err("retry exceeded".to_string())
         }
         if let Ok(_) = app.db.retrieve_intent(pid.as_str()).await{
             let now = chrono::Utc::now().timestamp_millis();
+            println!("found entry, attempting to push metric");
             init_time
                 .parse()
                 .ok()
@@ -168,7 +170,7 @@ async fn record_pi_lag(init_time: String, pid : String, app : App) -> Result<(),
             return Ok(())
         }
         retry_count = retry_count + 1;
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 }
 
