@@ -1002,10 +1002,10 @@ pub struct PaymentIntent {
 }
 
 impl PaymentIntent{
-    pub fn new(payment_id: String) -> Result<Self, Box<dyn std::error::Error>>{
+    pub fn new(payment_id: String, should_use_client_id : bool) -> Result<Self, Box<dyn std::error::Error>>{
      Ok(
         PaymentIntent {
-            payment_id: Self::generate_id(payment_id.as_str()),
+            payment_id: if should_use_client_id {payment_id} else {Self::generate_id(payment_id.as_str())},
             merchant_id: "kaps".to_string(),
             status: "Processing".to_string(),
             amount: 1234_i64,

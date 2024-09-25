@@ -45,6 +45,11 @@ fn setup_metrics_recorder() -> PrometheusHandle {
             EXPONENTIAL_SECONDS,
         )
         .unwrap()
+        .set_buckets_for_metric(
+            Matcher::Full("replication_lag".to_string()),
+        EXPONENTIAL_SECONDS,
+        )
+        .unwrap()
         .install_recorder()
         .unwrap()
 }
@@ -89,6 +94,8 @@ async fn start_app() {
 
     let router = axum::Router::new()
         .route("/init_db", get(init_db))
+        .route("/init_lag/:pid", get(init_lag))
+        .route("/record_lag/:pid/:init_time", get(record_lag))
         .route("/create/account/:merchant_id", get(create_account))
         .route("/create/:payment_id/:merchant_id", get(create_payment)) // create payment intent
         .route("/pay/:payment_id/:version", get(pay)) // create payment attempt
@@ -132,6 +139,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn init_lag(State(app) : State<App>, Path(pid) : Path<String>) -> Result<impl IntoResponse, DB_ERR> {
+    #[cfg(feature = "replicate")]
+    {
+        let _ = app.db.create_intent(pid.clone(), true).await.map_err(|e| DB_ERR(e.to_string()))?;
+        app.peer.call_next_cell(pid, chrono::Utc::now().timestamp_millis()).await.map_err(|e| DB_ERR(e.to_string()))?;
+    }
+    Ok(axum::Json(()))
+}
+          
+async fn record_lag(State(app) : State<App>, Path((pid, init_time)) : Path<(String, String)>) -> Result<impl IntoResponse, DB_ERR>{
+    tokio::spawn(record_pi_lag(init_time,pid,app));
+    Ok(axum::Json(()))
+}
+
+async fn record_pi_lag(init_time: String, pid : String, app : App) -> Result<(),String>{
+    let mut retry_count =0;
+    loop{
+        if retry_count == 10{
+            return Err("retry exceeded".to_string())
+        }
+        if let Ok(_) = app.db.retrieve_intent(pid.as_str()).await{
+            let now = chrono::Utc::now().timestamp_millis();
+            init_time
+                .parse()
+                .ok()
+                .map(|start : i64| metrics::histogram!("replication_lag").record((now-start) as f64));
+            return Ok(())
+        }
+        retry_count = retry_count + 1;
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+}
+
 async fn init_db(State(app): State<App>) -> Result<impl IntoResponse, String> {
     let _ = app.db.prepare().await.map_err(|_| "init failed")?;
     Ok(axum::Json(()))
@@ -159,7 +199,7 @@ async fn create_payment(
         .map_err(|e| DB_ERR(e.to_string()))?;
     let res = app
         .db
-        .create_intent(payment_id)
+        .create_intent(payment_id, false)
         .await
         .map_err(|e| DB_ERR(e.to_string()))?;
     Ok(axum::Json(res))

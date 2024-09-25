@@ -9,6 +9,7 @@ default = ["cassandra"]
 cassandra = ["dep:cassandra-cpp"]
 keyspaces = ["cassandra"]
 redis = []
+replicate = []
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -34,6 +35,7 @@ tower-http = { version = "0.5", features = ["trace"] }
 hyper = "1.4.1"
 tracing = "0.1.40"
 once_cell = "*"
+reqwest = {version = "*"}
 
 [profile.release]
 strip = false

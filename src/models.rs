@@ -12,7 +12,7 @@ use fred::prelude::{HashesInterface, ServerInterface};
 use futures::{lock, StreamExt};
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
-    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
+    async fn create_intent(&self, payment_id: String, should_use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
     async fn retrieve_intent<'a>(
         &self,
         payment_id: &'a str,
@@ -161,8 +161,8 @@ fn retrieve_payment_cql() -> String {
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for CassClient {
-    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>> {
-        let p_i = PaymentIntent::new(payment_id)?;
+    async fn create_intent(&self, payment_id: String, should_use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>> {
+        let p_i = PaymentIntent::new(payment_id, should_use_client_id)?;
         let query = p_i.insert();
         let _result = crate::utils::time_wrapper(query.execute(self.cassandra_session.as_ref()), "payment_intents", "CREATE", Some(p_i.payment_id.clone())).await?;
         Ok(PaymentIntentResponse{pi : p_i.payment_id})
