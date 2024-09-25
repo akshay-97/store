@@ -1,16 +1,14 @@
 import requests
 
 
-class PaymentIntent():
+class PaymentIntent:
     def __init__(self, id: str):
         self.id = id
 
 
-class PaymentAttempt():
-    def __init__(self, intent_id: str, attempt_id: str, version: str):
-        self.intent_id = intent_id
+class PaymentAttempt:
+    def __init__(self, attempt_id: str):
         self.attempt_id = attempt_id
-        self.version = version
 
 
 def parse_id(id: str):
@@ -22,22 +20,24 @@ class HyperswitchSdk:
     client = None
     base_url = ""
 
-    def __init__(self, base_url: str):
-        self.client = requests.Session()
-        self.base_url = base_url
+    def __init__(self, client):
+        self.client = client
+        self.payment_id = None
         self.cell_id = None
 
     def create_payment_intent(self, intent: PaymentIntent):
-        uri = "/create/" + intent.id
-        cell_id = parse_id(intent.id)
+        uri = "http://3.235.16.150:8000/create/" + intent.id + "/kaps"
 
         if self.client is not None:
             try:
                 headers = {}
                 if self.cell_id is not None:
-                    headers = {"x-region": cell_id}
+                    headers = {"x-region": self.cell_id}
 
-                self.client.get(url=self.base_url+uri, headers=headers)
+                response = self.client.get(uri, headers=headers).json()
+                cell_id = parse_id(response["pi"])
+                self.payment_id = response["pi"]
+                return response
             except Exception as e:
                 raise e
             finally:
@@ -48,7 +48,8 @@ class HyperswitchSdk:
             raise Exception("Client is not set up yet")
 
     def create_payment_attempt(self, attempt: PaymentAttempt):
-        uri = "/pay/" + attempt.attempt_id
+        uri = "http://3.235.16.150:8000/pay/" + \
+            self.payment_id + "/" + attempt.attempt_id
 
         if self.cell_id is None:
             raise Exception("Cannot make this request without cell id")
@@ -56,12 +57,12 @@ class HyperswitchSdk:
         headers = {"x-region": self.cell_id}
 
         try:
-            self.client.get(url=self.base_url+uri, headers=headers)
+            return self.client.get(uri, headers=headers).json()
         except Exception as e:
             raise e
 
     def update_attempt(self, attempt: PaymentAttempt):
-        uri = "/update_attempt/pay/" + attempt.version + attempt.intent_id
+        uri = "/update_attempt/pay/" + attempt.attempt_id + "/" + self.payment_id
 
         if self.cell_id is None:
             raise Exception("This cannot be called without cell_id")
@@ -69,7 +70,7 @@ class HyperswitchSdk:
         headers = {"x-region": self.cell_id}
 
         try:
-            self.client.get(url=self.base_url + uri, headers=headers)
+            return self.client.get(uri, headers=headers).json()
         except Exception as e:
             raise e
 
@@ -82,7 +83,7 @@ class HyperswitchSdk:
         headers = {"x-region": self.cell_id}
 
         try:
-            self.client.get(url=self.base_url + uri, headers=headers)
+            return self.client.get(uri, headers=headers).json()
         except Exception as e:
             raise e
 
@@ -94,6 +95,11 @@ class HyperswitchSdk:
 
         headers = {"x-region": self.cell_id}
         try:
-            self.client.get(url=self.base_url+uri, headers=headers)
+            return self.client.get(uri, headers=headers).json()
         except Exception as e:
             raise e
+
+
+session = HyperswitchSdk(requests.Session())
+session.create_payment_intent(PaymentIntent("gagagagaaglagjkag"))
+session.create_payment_attempt(PaymentAttempt("gagagagaaglagjkag_v1_v1"))
