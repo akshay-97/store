@@ -12,7 +12,7 @@ use fred::prelude::{HashesInterface, ServerInterface};
 use futures::{lock, StreamExt};
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
-    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
+    async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
     async fn retrieve_intent<'a>(
         &self,
         payment_id: &'a str,
@@ -178,10 +178,10 @@ fn retrieve_payment_cql() -> String {
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for CassClient {
-    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>> {
+    async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>> {
         let mut statement = self.cassandra_session.statement(insert_intent_cql());
 
-        let pi = PaymentIntent::new(payment_id);
+        let pi = PaymentIntent::new(payment_id, use_client_id);
         (&pi).populate_statement(&mut statement)?;
 
         //println!("what is statement {:?} ", statement);
