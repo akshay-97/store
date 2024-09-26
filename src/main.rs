@@ -12,6 +12,10 @@ use axum::http::StatusCode;
 use axum::{response::IntoResponse, routing::get};
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
 use tokio::net::TcpListener;
+use axum::{
+    http::{HeaderMap, HeaderValue},
+    middleware::{self, Next},
+};
 
 fn metrics_app() -> axum::Router {
     let recorder_handle = setup_metrics_recorder();
@@ -48,6 +52,29 @@ async fn start_metrics_server() {
         .unwrap();
     // tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn map_responsse(
+    mut res: axum::http::Response<axum::body::Body>,
+) -> axum::http::Response<axum::body::Body> {
+    res.headers_mut().insert(
+        hyper::header::HeaderName::from_static("x-region"),
+        HeaderValue::from_static(crate::types::cell),
+    );
+    res
+}
+
+async fn map(req: axum::http::Request<axum::body::Body>) -> axum::http::Request<axum::body::Body> {
+    if req
+        .headers()
+        .get("x-region")
+        .map(|val| val != crate::types::cell)
+        .unwrap_or_default()
+    {
+        //OWNER.increment(1);
+        metrics::counter!("OWNER_CHANGED", "region" => crate::types::cell).increment(1);
+    }
+    req
 }
 
 async fn start_app() {
@@ -95,7 +122,9 @@ async fn start_app() {
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
         .layer(trace)
         .with_state(store)
-        .route("/health", get(|| async { "OK" }));
+        .route("/health", get(|| async { "OK" }))
+        .layer(axum::middleware::map_request(map))
+        .layer(axum::middleware::map_response(map_responsse));
     axum::serve(
         TcpListener::bind((
             server_host,
