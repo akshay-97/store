@@ -32,9 +32,10 @@ class PaymentsBehaviour(SequentialTaskSet):
 
         try:
             response = self.session.create_payment_intent(payment_intent)
-            self.payment_id = response["pi"]
-            config_set['pi'].append(response["pi"])
-            print(self.session.cell_id, str(datetime.datetime.now()))
+            if response:
+                self.payment_id = response["pi"]
+                config_set['pi'].append(response["pi"])
+                print(self.session.cell_id, str(datetime.datetime.now()))
         except Exception as e:
             print(str(e))
 
@@ -44,9 +45,10 @@ class PaymentsBehaviour(SequentialTaskSet):
             payment_attempt = PaymentAttempt(
                 self.payment_id + 'version' + str(i))
             response = self.session.create_payment_attempt(payment_attempt)
-            self.attempt_version[i] = response["pa"]
-            config_set['pa'].append(
-                self.payment_id + ',' + self.attempt_version[i] + '\n')
+            if response:
+                self.attempt_version[i] = response["pa"]
+                config_set['pa'].append(
+                    self.payment_id + ',' + self.attempt_version[i] + '\n')
 
     @task(1)
     def update_attempt(self):

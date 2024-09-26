@@ -26,7 +26,7 @@ class HyperswitchSdk:
         self.cell_id = None
 
     def create_payment_intent(self, intent: PaymentIntent):
-        uri = "http://3.235.16.150:8000/create/" + intent.id + "/kaps"
+        uri = "/create/" + intent.id + "/kaps"
 
         if self.client is not None:
             try:
@@ -34,72 +34,75 @@ class HyperswitchSdk:
                 if self.cell_id is not None:
                     headers = {"x-region": self.cell_id}
 
-                response = self.client.get(uri, headers=headers).json()
-                cell_id = parse_id(response["pi"])
-                self.payment_id = response["pi"]
-                return response
-            except Exception as e:
-                raise e
-            finally:
-                if self.cell_id is None:
+                response = self.client.get(
+                    uri, headers=headers, name="IntentCreate")
+                if response.status_code == 200:
+                    response = response.json()
+                    cell_id = parse_id(response["pi"])
+                    self.payment_id = response["pi"]
                     self.cell_id = cell_id
 
+                    return response
+            except Exception as e:
+                raise e
         else:
             raise Exception("Client is not set up yet")
 
     def create_payment_attempt(self, attempt: PaymentAttempt):
-        uri = "http://3.235.16.150:8000/pay/" + \
-            self.payment_id + "/" + attempt.attempt_id
+        if self.payment_id:
+            uri = "/pay/" + \
+                self.payment_id + "/" + attempt.attempt_id
 
-        if self.cell_id is None:
-            raise Exception("Cannot make this request without cell id")
+            try:
+                headers = {"x-region": self.cell_id}
+                response = self.client.get(
+                    uri, headers=headers, name="AttemptCreate" + " :" + self.cell_id)
+                if response.status_code == 200:
+                    response = response.json()
+                    self.cell_id = parse_id(response["pa"])
 
-        headers = {"x-region": self.cell_id}
-
-        try:
-            return self.client.get(uri, headers=headers).json()
-        except Exception as e:
-            raise e
+                return response
+            except Exception as e:
+                raise e
 
     def update_attempt(self, attempt: PaymentAttempt):
-        uri = "/update_attempt/pay/" + attempt.attempt_id + "/" + self.payment_id
+        if self.payment_id is not None and self.cell_id is not None:
+            uri = "/update_attempt/pay/" + attempt.attempt_id + "/" + self.payment_id
 
-        if self.cell_id is None:
-            raise Exception("This cannot be called without cell_id")
+            headers = {"x-region": self.cell_id}
 
-        headers = {"x-region": self.cell_id}
+            try:
+                response = self.client.get(
+                    uri, headers=headers, name="UpdateAttempt" + " :" + self.cell_id)
 
-        try:
-            return self.client.get(uri, headers=headers).json()
-        except Exception as e:
-            raise e
+                if response.status_code == 200:
+                    return response.json()
+            except Exception as e:
+                raise e
 
     def update_intent(self, intent: PaymentIntent):
-        uri = "/update_intent/" + intent.id
+        if self.cell_id:
+            uri = "/update_intent/" + intent.id
 
-        if self.cell_id is None:
-            raise Exception("This cannot be called without cell_id")
+            headers = {"x-region": self.cell_id}
 
-        headers = {"x-region": self.cell_id}
-
-        try:
-            return self.client.get(uri, headers=headers).json()
-        except Exception as e:
-            raise e
+            try:
+                response = self.client.get(
+                    uri, headers=headers, name="UpdateIntent" + " :" + self.cell_id)
+                if response.status_code == 200:
+                    return response.json()
+            except Exception as e:
+                raise e
 
     def retrieve_intent(self, payment_id: str):
-        uri = "/retrieve/payment_intent/" + payment_id
+        if self.cell_id:
+            uri = "/retrieve/payment_intent/" + payment_id
 
-        if self.cell_id is None:
-            raise Exception("This cannot be called without cell_id")
-
-        headers = {"x-region": self.cell_id}
-        try:
-            return self.client.get(uri, headers=headers).json()
-        except Exception as e:
-            raise e
-
-
-session = HyperswitchSdk(requests.Session())
-session.create_payment_intent(PaymentIntent("gagagagaaglagjkag"))
-session.create_payment_attempt(PaymentAttempt("gagagagaaglagjkag_v1_v1"))
+            headers = {"x-region": self.cell_id}
+            try:
+                response = self.client.get(
+                    uri, headers=headers, name="RetrieveIntent" + " :" + self.cell_id)
+                if response.status_code == 200:
+                    return response.json()
+            except Exception as e:
+                raise e
