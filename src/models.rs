@@ -123,14 +123,18 @@ impl MerchantAccountInterface for crate::store::SGPool{
 #[async_trait::async_trait]
 impl PaymentIntentInterface for crate::store::SGPool {
     async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>{
-        let query = stargate_grpc::Query::builder().keyspace("payments").query(insert_intent_cql().as_str());
+        let query = stargate_grpc::Query::builder()
+                .keyspace("payments")
+                .query(insert_intent_cql().as_str())
+                .consistency(stargate_grpc::Consistency::LocalQuorum);
         let pi = PaymentIntent::new(payment_id);
         let payment_id = pi.payment_id.clone();
 
         let updated_query = pi.bind_statement(query)?.build();
         let mut client = self.pool.get().await.unwrap();
 
-        client.execute_query(updated_query).await?;
+        crate::utils::time_wrapper(client.execute_query(updated_query), "payment_intent", "CREATE").await?;
+        //client.execute_query(updated_query).await?;
         
         Ok(PaymentIntentResponse{pi : payment_id})
     }
@@ -140,12 +144,14 @@ impl PaymentIntentInterface for crate::store::SGPool {
     ) -> Result<(), Box<dyn std::error::Error>>{
         let query = stargate_grpc::Query::builder()
                         .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
                         .query(retrieve_payment_cql().as_str())
                         .bind((payment_id, "kaps"))
                         .build();
         
         let mut client = self.pool.get().await.unwrap();
-        client.execute_query(query).await?;
+        //client.execute_query(query).await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_intent", "FIND").await?;
         Ok(())
     }
     async fn update_intent<'a>(
@@ -154,11 +160,13 @@ impl PaymentIntentInterface for crate::store::SGPool {
     ) -> Result<(), Box<dyn std::error::Error>>{
         let query = stargate_grpc::Query::builder()
                         .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
                         .query(update_intent_cql().as_str())
                         .bind(("SUCCESS",payment_id, "kaps"))
                         .build();
         let mut client = self.pool.get().await.unwrap();
-        client.execute_query(query).await?;           
+        crate::utils::time_wrapper(client.execute_query(query), "payment_intent", "UPDATE").await?;
+        //client.execute_query(query).await?;           
         
         Ok(())
     }
@@ -172,15 +180,17 @@ impl PaymentAttemptInterface for crate::store::SGPool{
         payment_id: String,
         version: String,
     ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>>{
-        let query = stargate_grpc::Query::builder().keyspace("payments").query(insert_attempt_cql().as_str());
+        let query = stargate_grpc::Query::builder().keyspace("payments")
+                .consistency(stargate_grpc::Consistency::LocalQuorum)
+                .query(insert_attempt_cql().as_str());
         let pa = PaymentAttempt::new(payment_id , version);
         let payment_attempt_id = pa.attempt_id.clone();
         
         let updated_query = pa.bind_statement(query)?.build();
 
         let mut client = self.pool.get().await.unwrap();
-        client.execute_query(updated_query).await?; 
-
+        //client.execute_query(updated_query).await?; 
+        crate::utils::time_wrapper(client.execute_query(updated_query), "payment_attempt", "CREATE").await?;
         Ok(PaymentAttemptResponse { pa: payment_attempt_id })
 
     }
@@ -189,12 +199,14 @@ impl PaymentAttemptInterface for crate::store::SGPool{
         -> Result<(), Box<dyn std::error::Error>>{
      let query = stargate_grpc::Query::builder()
                         .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
                         .query(select_payment_attempt_all().as_str())
                         .bind((payment_id, "kaps"))
                         .build();
         
         let mut client = self.pool.get().await.unwrap();
-        client.execute_query(query).await?;
+        //client.execute_query(query).await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "FIND_ALL").await?;
         Ok(())
     }
 
@@ -205,12 +217,14 @@ impl PaymentAttemptInterface for crate::store::SGPool{
     ) -> Result<(), Box<dyn std::error::Error>>{
      let query = stargate_grpc::Query::builder()
                         .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
                         .query(update_attempt_cql().as_str())
                         .bind((enum_parse(&get_large_value())?, payment_id, "kaps", version))
                         .build();
         
         let mut client = self.pool.get().await.unwrap();
-        client.execute_query(query).await?;
+        //client.execute_query(query).await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "UPDATE").await?;
         Ok(())
     }
 
@@ -221,12 +235,14 @@ impl PaymentAttemptInterface for crate::store::SGPool{
     ) -> Result<(), Box<dyn std::error::Error>>{
         let query = stargate_grpc::Query::builder()
                         .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
                         .query(retrieve_by_id().as_str())
                         .bind((payment_id, "kaps", payment_attempt_id))
                         .build();
         
         let mut client = self.pool.get().await.unwrap();
-        client.execute_query(query).await?;
+        //client.execute_query(query).await?;
+         crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "FIND").await?;
         Ok(())    
     }
 }
