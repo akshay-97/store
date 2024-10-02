@@ -336,9 +336,9 @@ pub struct PaymentIntent {
 }
 
 impl PaymentIntent {
-    pub fn new(i: String) -> Self {
+    pub fn new(i: String, use_client_id : bool) -> Self {
         PaymentIntent {
-            payment_id: Self::generate_id(&i),
+            payment_id: if use_client_id {i} else {Self::generate_id(&i)},
             merchant_id: "kaps".to_string(),
             status: "Processing".to_string(),
             amount: 1234_i64,

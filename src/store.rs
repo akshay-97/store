@@ -6,6 +6,7 @@ use scylla::CachingSession;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use reqwest::Client;
 
 #[cfg(feature = "astra")]
 use stargate_grpc::*;
@@ -33,12 +34,41 @@ pub trait StorageInterface:
 
 pub struct App {
     pub db: Box<dyn StorageInterface>,
+    #[cfg(feature = "replicate")]
+    pub peer: RClient
+}
+
+#[derive(Clone)]
+pub struct RClient{
+    client : Client,
+    addr : String
+}
+
+impl RClient{
+    pub async fn call_next_cell(&self, pid: String, timestamp : i64) -> std::result::Result<(), Box<dyn std::error::Error>>{
+        let req = format!("{}{}/{}",self.addr, pid,timestamp);
+        self.client.get(req).send().await?;
+        Ok(())
+    }
+    fn new() -> std::result::Result<Self, Box<dyn std::error::Error>>{
+        let peer_addr = env::var("LAG_PEER_ADDR").context("lag peer addr not found")?;
+        let client = Client::builder()
+                    .pool_max_idle_per_host(10)
+                    .pool_idle_timeout(std::time::Duration::from_secs(90))
+                    .build()?;
+        Ok(Self{
+            client,
+            addr : format!("http://{}:8000/record_lag/", peer_addr)
+        })
+    }
 }
 
 impl Clone for App {
     fn clone(&self) -> Self {
         Self {
             db: dyn_clone::clone_box(&*(self.db)),
+            #[cfg(feature = "replicate")]
+            peer : self.peer.clone(),
         }
     }
 }
@@ -54,6 +84,9 @@ impl App {
 
             #[cfg(feature = "astra")]
             db : Box::new(SGPool::new().await?),
+
+            #[cfg(feature = "replicate")]
+            peer : RClient::new()?,
         })
     }
 }

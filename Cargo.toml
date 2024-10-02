@@ -9,6 +9,7 @@ default = ["astra"]
 cassandra = ["dep:cassandra-cpp"]
 redis = []
 astra = ["stargate-grpc"]
+replicate = ["astra"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -34,6 +35,7 @@ hyper = "1.4.1"
 tracing = "0.1.40"
 stargate-grpc = {version = "0.3", optional  = true}
 bb8 = {version = "*"}
+reqwest = {version = "*"}
 
 [profile.release]
 strip = false

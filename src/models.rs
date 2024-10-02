@@ -13,7 +13,7 @@ use fred::prelude::{HashesInterface, ServerInterface};
 use futures::{lock, StreamExt};
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
-    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
+    async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
     async fn retrieve_intent<'a>(
         &self,
         payment_id: &'a str,
@@ -122,12 +122,12 @@ impl MerchantAccountInterface for crate::store::SGPool{
 #[cfg(feature = "astra")]
 #[async_trait::async_trait]
 impl PaymentIntentInterface for crate::store::SGPool {
-    async fn create_intent(&self, payment_id: String) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>{
+    async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>{
         let query = stargate_grpc::Query::builder()
                 .keyspace("payments")
                 .query(insert_intent_cql().as_str())
                 .consistency(stargate_grpc::Consistency::LocalQuorum);
-        let pi = PaymentIntent::new(payment_id);
+        let pi = PaymentIntent::new(payment_id, use_client_id);
         let payment_id = pi.payment_id.clone();
 
         let updated_query = pi.bind_statement(query)?.build();
