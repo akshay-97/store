@@ -133,7 +133,7 @@ impl PaymentIntentInterface for crate::store::SGPool {
         let updated_query = pi.bind_statement(query)?.build();
         let mut client = self.pool.get().await.unwrap();
 
-        crate::utils::time_wrapper(client.execute_query(updated_query), "payment_intent", "CREATE").await?;
+        crate::utils::time_wrapper(client.execute_query(updated_query), "payment_intent", "CREATE", Some(payment_id.clone())).await?;
         //client.execute_query(updated_query).await?;
         
         Ok(PaymentIntentResponse{pi : payment_id})
@@ -151,7 +151,7 @@ impl PaymentIntentInterface for crate::store::SGPool {
         
         let mut client = self.pool.get().await.unwrap();
         //client.execute_query(query).await?;
-        crate::utils::time_wrapper(client.execute_query(query), "payment_intent", "FIND").await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_intent", "FIND", None).await?;
         Ok(())
     }
     async fn update_intent<'a>(
@@ -165,7 +165,7 @@ impl PaymentIntentInterface for crate::store::SGPool {
                         .bind(("SUCCESS",payment_id, "kaps"))
                         .build();
         let mut client = self.pool.get().await.unwrap();
-        crate::utils::time_wrapper(client.execute_query(query), "payment_intent", "UPDATE").await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_intent", "UPDATE", Some(payment_id.to_string())).await?;
         //client.execute_query(query).await?;           
         
         Ok(())
@@ -190,7 +190,7 @@ impl PaymentAttemptInterface for crate::store::SGPool{
 
         let mut client = self.pool.get().await.unwrap();
         //client.execute_query(updated_query).await?; 
-        crate::utils::time_wrapper(client.execute_query(updated_query), "payment_attempt", "CREATE").await?;
+        crate::utils::time_wrapper(client.execute_query(updated_query), "payment_attempt", "CREATE", Some(payment_attempt_id.clone())).await?;
         Ok(PaymentAttemptResponse { pa: payment_attempt_id })
 
     }
@@ -206,7 +206,7 @@ impl PaymentAttemptInterface for crate::store::SGPool{
         
         let mut client = self.pool.get().await.unwrap();
         //client.execute_query(query).await?;
-        crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "FIND_ALL").await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "FIND_ALL", None).await?;
         Ok(())
     }
 
@@ -224,7 +224,7 @@ impl PaymentAttemptInterface for crate::store::SGPool{
         
         let mut client = self.pool.get().await.unwrap();
         //client.execute_query(query).await?;
-        crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "UPDATE").await?;
+        crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "UPDATE", Some(payment_id.to_string())).await?;
         Ok(())
     }
 
@@ -242,7 +242,7 @@ impl PaymentAttemptInterface for crate::store::SGPool{
         
         let mut client = self.pool.get().await.unwrap();
         //client.execute_query(query).await?;
-         crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "FIND").await?;
+         crate::utils::time_wrapper(client.execute_query(query), "payment_attempt", "FIND", None).await?;
         Ok(())    
     }
 }
