@@ -1091,3 +1091,117 @@ fn s_opt<T:Serialize>(d : Option<T>) -> Result<String,Box<dyn std::error::Error>
     }
     return Ok("".to_owned())
 }
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct PaymentMethods {
+    pub customer_id: String,
+    pub merchant_id: String,
+    pub payment_method_id: String,
+     // #[diesel(deserialize_as = super::OptionalDieselArray<storage_enums::Currency>)]
+    pub accepted_currency: Option<String>,
+    pub scheme: Option<String>,
+    pub token: Option<String>,
+    pub cardholder_name: Option<String>,
+    pub issuer_name: Option<String>,
+    pub issuer_country: Option<String>,
+    // #[diesel(deserialize_as = super::OptionalDieselArray<String>)]
+    pub payer_country: Option<String>,
+    pub is_stored: Option<bool>,
+    pub swift_code: Option<String>,
+    pub direct_debit_token: Option<String>,
+    pub created_at: String,
+    pub last_modified: String,
+    pub payment_method: Option<String>,
+    pub payment_method_type: Option<String>,
+    pub payment_method_issuer: Option<String>,
+    pub payment_method_issuer_code: Option<String>,
+    pub metadata: Option<String>,
+    pub payment_method_data: Option<String>,
+    pub locker_id: Option<String>,
+    pub last_used_at: String,
+    pub connector_mandate_details: Option<String>,
+    pub customer_acceptance: Option<String>,
+    pub status: String,
+    pub network_transaction_id: Option<String>,
+    pub client_secret: Option<String>,
+    pub payment_method_billing_address: Option<String>,
+    pub updated_by: Option<String>,
+    pub version: String,
+}
+
+impl PaymentMethods{
+    pub fn new(customer : String, pi : String) -> Result<Self, Box<dyn std::error::Error>>{
+        Ok(Self { customer_id: customer, merchant_id: "kaps".to_string(),
+            payment_method_id: pi,
+            accepted_currency: Some("ID".to_string()),
+            scheme: Some("tls".to_string()),
+            token:  Some("randomeString12412953w23421".to_owned()),
+            cardholder_name: OptString("name"),
+            issuer_name: OptString("name"),
+            issuer_country: OptString("name"),
+            payer_country: OptString("name"), is_stored: Some(true),
+            swift_code: OptString("name"),
+            direct_debit_token: OptString("name"),
+            created_at: serde_json::to_string(&time::PrimitiveDateTime::MAX)?,
+            last_modified: serde_json::to_string(&time::PrimitiveDateTime::MAX)?,
+            payment_method: OptString("CARD"),
+            payment_method_type: OptString("MASTERCARD"),
+            payment_method_issuer: OptString("CARD_NETWORK"),
+            payment_method_issuer_code: OptString("CARD_NETWORK"),
+            metadata: OptString("metadata"),
+            payment_method_data: Some(serde_json::to_string(&get_large_value())?),
+            locker_id: OptString("CARD_NETWORK"),
+            last_used_at: serde_json::to_string(&time::PrimitiveDateTime::MAX)?,
+            connector_mandate_details: Some(serde_json::to_string(&get_large_value())?),
+            customer_acceptance: OptString("CARD_NETWORK"),
+            status: "NEW".to_string(),
+            network_transaction_id: OptString("CARD_NETWORK"),
+            client_secret: OptString("CARD_NETWORK"),
+            payment_method_billing_address: OptString("CARD_NETWORK"),
+            updated_by: OptString("CARD_NETWORK"),
+            version: "v1".to_string()
+        })
+    }
+
+    #[cfg(feature = "astra")]
+    pub fn bind_statement(self, query : stargate_grpc::query::QueryBuilder)
+        -> Result<stargate_grpc::query::QueryBuilder, Box<dyn std::error::Error>>{
+        Ok(query
+            .bind_ith(0, self.customer_id)
+            .bind_ith(1, self.merchant_id)
+            .bind_ith(2, self.payment_method_id)
+            .bind_ith(3, self.accepted_currency)
+            .bind_ith(4, self.scheme)
+            .bind_ith(5, self.token)
+            .bind_ith(6, self.cardholder_name)
+            .bind_ith(7, self.issuer_name)
+            .bind_ith(8, self.issuer_country)
+            .bind_ith(9, self.payer_country)
+            .bind_ith(10, self.is_stored)
+            .bind_ith(11, self.swift_code)
+            .bind_ith(12, self.direct_debit_token)
+            .bind_ith(13, self.created_at)
+            .bind_ith(14, self.last_modified)
+            .bind_ith(15, self.payment_method)
+            .bind_ith(16, self.payment_method_type)
+            .bind_ith(17, self.payment_method_issuer)
+            .bind_ith(18, self.payment_method_issuer_code)
+            .bind_ith(19, self.metadata)
+            .bind_ith(20, self.payment_method_data)
+            .bind_ith(21, self.locker_id)
+            .bind_ith(22, self.last_used_at)
+            .bind_ith(23, self.connector_mandate_details)
+            .bind_ith(24, self.customer_acceptance)
+            .bind_ith(25, self.status)
+            .bind_ith(26, self.network_transaction_id)
+            .bind_ith(27, self.client_secret)
+            .bind_ith(28, self.payment_method_billing_address)
+            .bind_ith(29, self.updated_by)
+            .bind_ith(30, self.version)
+            )
+    }
+}
+
+fn OptString(st : &'static str) -> Option<String>{
+    Some(st.to_string())
+}

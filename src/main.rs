@@ -94,6 +94,8 @@ async fn start_app() {
             get(retrieve_attempt),
         )
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
+        .route("/create/payment_method/:customer/:id", get(create_method))
+        .route("/find/payment_methods/:customer_id", get(find_all_customer))
         .layer(trace)
         .with_state(store)
         .route("/health", get(|| async { "OK" }));
@@ -261,10 +263,25 @@ async fn retrieve(
     Ok(axum::Json(()))
 }
 
+async fn create_method(State(app) : State<App>,
+    Path((customer_id, pid)) : Path<(String, String)>) -> Result<impl IntoResponse, DB_ERR>{
+        let _ = app
+            .db
+            .create_payment_method(customer_id , pid)
+            .await
+            .map_err(|e| DB_ERR(e.to_string()))?;
+        Ok(axum::Json(()))
+}
+
+async fn find_all_customer(State(app) : State<App>, Path(customer_id) : Path<String>)
+    -> Result<impl IntoResponse , DB_ERR>{
+       Err::<(), DB_ERR>(DB_ERR("ask me".to_string()))
+}
 struct DB_ERR(String);
 
 impl IntoResponse for DB_ERR {
     fn into_response(self) -> axum::response::Response {
+        println!("ERROR: {}", self.0); 
         (StatusCode::INTERNAL_SERVER_ERROR, self.0).into_response()
     }
 }
