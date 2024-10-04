@@ -15,7 +15,7 @@ where
     #[cfg(not(feature = "replicate"))]
     {
         println!("\"{}\" {} {}" , model_name, op,time_spent.as_micros());
-        metrics::histogram!("latency_tracker_r", &[("model", model_name.to_string()), ("operation", op.to_string()), ("cell", crate::types::cell.to_string())]).record(time_spent.as_secs_f64() * (1000 as f64));
+        metrics::histogram!("latency_tracker_e", &[("model", model_name.to_string()), ("operation", op.to_string()), ("cell", crate::types::cell.to_string())]).record(time_spent.as_secs_f64() * (1000 as f64));
     }
     result
 }

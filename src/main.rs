@@ -23,13 +23,13 @@ fn metrics_app() -> axum::Router {
 }
 
 fn setup_metrics_recorder() -> PrometheusHandle {
-    const EXPONENTIAL_SECONDS: &[f64] = &[
-        10.0, 50.0, 100.0, 300.0, 500.0, 750.0, 1000.0, 1500.0, 2000.0, 3000.0, 5000.0,
+    const EXPONENTIAL_SECONDS: &[f64] = &[1.0, 2.0, 3.0, 4.0,
+        10.0, 50.0, 100.0,300.0
     ];
 
     PrometheusBuilder::new()
         .set_buckets_for_metric(
-            Matcher::Full("latency_tracker_r".to_string()),
+            Matcher::Full("latency_tracker_e".to_string()),
             EXPONENTIAL_SECONDS,
         )
         .unwrap()
@@ -44,7 +44,7 @@ fn setup_metrics_recorder() -> PrometheusHandle {
 
 async fn start_metrics_server() {
     let app = metrics_app();
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3001")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3001")
         .await
         .unwrap();
     // tracing::debug!("listening on {}", listener.local_addr().unwrap());
