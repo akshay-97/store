@@ -258,12 +258,16 @@ impl PaymentAttemptInterface for crate::store::SGPool{
     }
 }
 
+// fn insert_payment_method() -> String {
+//     "INSERT INTO accounts.payment_methods (customer_id,merchant_id,payment_method_id,accepted_currency,scheme,cardholder_name,issuer_name,issuer_country,payer_country,is_stored,swift_code,direct_debit_token,created_at,last_modified,payment_method,payment_method_type,payment_method_issuer,payment_method_issuer_code,metadata,payment_method_data,locker_id,last_used_at,connector_mandate_details,customer_acceptance,status,network_transaction_id,client_secret,payment_method_billing_address,updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);".to_owned()
+// }
+
 fn insert_payment_method() -> String {
-    "INSERT INTO accounts.payment_methods (customer_id,merchant_id,payment_method_id,accepted_currency,scheme,cardholder_name,issuer_name,issuer_country,payer_country,is_stored,swift_code,direct_debit_token,created_at,last_modified,payment_method,payment_method_type,payment_method_issuer,payment_method_issuer_code,metadata,payment_method_data,locker_id,last_used_at,connector_mandate_details,customer_acceptance,status,network_transaction_id,client_secret,payment_method_billing_address,updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);".to_owned()
+    "INSERT INTO accounts.test_methods (customer_id, merchant_id , payment_method_id, metadata) VALUES (?, ?, ?, ?);".to_owned()
 }
 
 fn select_payment_methods_all() -> String {
-    "SELECT * FROM accounts.payment_methods WHERE customer_id = ? AND merchant_id = ?;".to_owned()
+    "SELECT * FROM accounts.test_methods WHERE customer_id = ? AND merchant_id = ?;".to_owned()
 }
 
 #[cfg(feature = "astra")]
