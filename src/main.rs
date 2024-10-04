@@ -275,7 +275,12 @@ async fn create_method(State(app) : State<App>,
 
 async fn find_all_customer(State(app) : State<App>, Path(customer_id) : Path<String>)
     -> Result<impl IntoResponse , DB_ERR>{
-       Err::<(), DB_ERR>(DB_ERR("ask me".to_string()))
+       let _ = app
+            .db
+            .find_all_payment_method_by_customer_merchant(customer_id)
+            .await
+            .map_err(|e| DB_ERR(e.to_string()))?;
+        Ok(axum::Json(()))
 }
 struct DB_ERR(String);
 
