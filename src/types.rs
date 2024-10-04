@@ -1196,7 +1196,6 @@ impl PaymentMethods{
             .bind_ith(26, self.client_secret)
             .bind_ith(27, self.payment_method_billing_address)
             .bind_ith(28, self.updated_by)
-            .bind_ith(29, self.version)
             )
     }
 }
