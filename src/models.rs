@@ -403,7 +403,7 @@ impl PaymentAttemptInterface for RedisClient {
         let pi = PaymentIntent::new(payment_id, use_client_id);
         let payment_id = pi.payment_id.clone();
         let query = pi.put_item(&self.client)?;
-        query.send().await?;
+        crate::utils::time_wrapper(query.send(), "payment_intents", "CREATE", Some(payment_id.to_string())).await?;
         Ok(PaymentIntentResponse{pi : payment_id})
     }
 
@@ -425,7 +425,7 @@ impl PaymentAttemptInterface for RedisClient {
         for (k,v) in record.into_iter(){
             builder = builder.item(k,v)
         }
-        builder.send().await;
+        crate::utils::time_wrapper(builder.send(), "payment_intents", "UPDATE", Some(payment_id.to_string())).await?;
         Ok(())
 
     }
@@ -434,26 +434,27 @@ impl PaymentAttemptInterface for RedisClient {
 async fn retrieve_helper(client : &aws_sdk_dynamodb::Client, payment_id : &'_ str) -> Result<HashMap<String, AttributeValue>, Box<dyn std::error::Error>>
 {
     let key_av = AttributeValue::S(payment_id.to_string());
-    match client
+    let query = client
             .query()
             .table_name("payment_intents".to_string())
             .key_condition_expression("#key = :value".to_string())
             .expression_attribute_names("#key".to_string(), "payment_id".to_string())
             .expression_attribute_values(":value".to_string(), key_av)
-            .select(Select::AllAttributes)
-            .send()
+            .select(Select::AllAttributes);
+    
+    match crate::utils::time_wrapper(query.send(), "payment_intents", "FIND_ALL", Some(payment_id.to_string()))
             .await
-        {
-            Ok(resp) => {
-                if let Some(el) = resp.items
-                    .and_then(|mut v| v.pop())
-                {
-                    return Ok(el)
-                }
-                Err("no pi found".into())
-            },
-            Err(e) => Err(e.into())
-        }
+    {
+        Ok(resp) => {
+            if let Some(el) = resp.items
+                .and_then(|mut v| v.pop())
+            {
+                return Ok(el)
+            }
+            Err("no pi found".into())
+        },
+        Err(e) => Err(e.into())
+    }
 }
 
 #[async_trait::async_trait]
@@ -464,10 +465,10 @@ impl PaymentAttemptInterface for DynamoClient{
         version: String,
     ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>>
     {
-        let pa = PaymentAttempt::new(payment_id, version);
+        let pa = PaymentAttempt::new(payment_id.clone(), version);
         let attempt_id = pa.attempt_id.clone();
         let query = pa.put_item(&self.client)?;
-        query.send().await;
+        crate::utils::time_wrapper(query.send(), "payment_attempts", "CREATE", Some(payment_id)).await?;
         Ok(PaymentAttemptResponse { pa: attempt_id })
     }
 
@@ -496,7 +497,7 @@ impl PaymentAttemptInterface for DynamoClient{
         for (k,v) in obj.into_iter(){
             builder = builder.item(k,v)
         }
-        builder.send().await;
+        crate::utils::time_wrapper(builder.send(), "payment_attempts", "UPDATE", Some(version)).await?;
         Ok(())
 
     }
@@ -537,10 +538,10 @@ async fn retrieve_attempt_helper(client : &aws_sdk_dynamodb::Client, payment_id 
         None => {}
     }
     
-    match queryBuilder
+    match crate::utils::time_wrapper(queryBuilder
             .select(Select::AllAttributes)
             .send()
-            .await
+        , "payment_attempts" , "FIND", Some(payment_id.to_string())).await
     {
         Ok(resp) => {
             if let Some(el) = resp.items
