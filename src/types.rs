@@ -1,5 +1,6 @@
 use std::time::UNIX_EPOCH;
 
+use anyhow::Context;
 use charybdis::scylla::{CqlValue, FromCqlVal};
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
@@ -7,6 +8,8 @@ use charybdis::macros::charybdis_model;
 use charybdis::types::{Text, Time, Timestamp};
 use chrono::Utc;
 
+use aws_sdk_dynamodb::types::*;
+use aws_sdk_dynamodb::operation::put_item::builders::PutItemFluentBuilder;
 pub const cell: &'static str = env!("CELL", "couldnt find cell env");
 
 
@@ -218,6 +221,71 @@ impl PaymentAttempt {
             client_version: Some("randomeString12412953w23421".to_owned()),
         }
     }
+
+    #[cfg(feature = "dynamo")]
+    pub fn put_item(self : Self, client : &aws_sdk_dynamodb::Client) -> Result<PutItemFluentBuilder, Box<dyn std::error::Error>>{
+        let q = client
+            .put_item()
+            .table_name("payment_attempts".to_string())
+            .item("payment_id", AttributeValue::S(self.payment_id))
+            .item("merchant_id", AttributeValue::S(self.merchant_id))
+            .item("attempt_id", AttributeValue::S(self.attempt_id))
+            .item("status", AttributeValue::S(serde_json::to_string(&self.status)?))  // Assuming AttemptStatus can be converted to a String
+            .item("amount", AttributeValue::N(self.amount.to_string()))
+            .item("currency", AttributeValue::S(self.currency.map_or_else(|| "None".to_string(), |c| c.to_data()))) // Handle Option<Currency>
+            .item("save_to_locker", AttributeValue::Bool(self.save_to_locker.unwrap_or(false)))  // Handling Option<bool>
+            .item("connector", AttributeValue::S(self.connector.unwrap_or_else(|| "None".to_string())))
+            .item("error_message", AttributeValue::S(self.error_message.unwrap_or_else(|| "None".to_string())))
+            .item("offer_amount", AttributeValue::N(self.offer_amount.unwrap_or(0).to_string()))
+            .item("surcharge_amount", AttributeValue::N(self.surcharge_amount.unwrap_or(0).to_string()))
+            .item("tax_amount", AttributeValue::N(self.tax_amount.unwrap_or(0).to_string()))
+            .item("payment_method_id", AttributeValue::S(self.payment_method_id.unwrap_or_else(|| "None".to_string())))
+            .item("payment_method", AttributeValue::S(self.payment_method.map_or_else(|| "None".to_string(), |pm| pm.to_data())))  // Assuming PaymentMethod can be converted to a String
+            .item("connector_transaction_id", AttributeValue::S(self.connector_transaction_id.unwrap_or_else(|| "None".to_string())))
+            .item("capture_method", AttributeValue::S(self.capture_method.map_or_else(|| "None".to_string(), |cm| cm.to_data())))  // Assuming CaptureMethod can be converted to a String
+            .item("capture_on", AttributeValue::S(self.capture_on.map_or_else(|| "None".to_string(), |co| co.to_string())))
+            .item("confirm", AttributeValue::Bool(self.confirm))
+            .item("authentication_type", AttributeValue::S(self.authentication_type.map_or_else(|| "None".to_string(), |at| at.to_data())))  // Assuming AuthenticationType can be converted to a String
+            .item("created_at", AttributeValue::S(self.created_at.to_string()))
+            .item("modified_at", AttributeValue::S(self.modified_at.to_string()))
+            .item("last_synced", AttributeValue::S(self.last_synced.map_or_else(|| "None".to_string(), |ls| ls.to_string())))
+            .item("cancellation_reason", AttributeValue::S(self.cancellation_reason.unwrap_or_else(|| "None".to_string())))
+            .item("amount_to_capture", AttributeValue::N(self.amount_to_capture.unwrap_or(0).to_string()))
+            .item("mandate_id", AttributeValue::S(self.mandate_id.unwrap_or_else(|| "None".to_string())))
+            .item("browser_info", AttributeValue::S(self.browser_info.map_or_else(|| "None".to_string(), |bi| bi.to_string())))
+            .item("error_code", AttributeValue::S(self.error_code.unwrap_or_else(|| "None".to_string())))
+            .item("payment_token", AttributeValue::S(self.payment_token.unwrap_or_else(|| "None".to_string())))
+            .item("connector_metadata", AttributeValue::S(self.connector_metadata.map_or_else(|| "None".to_string(), |cm| cm.to_string())))
+            .item("payment_experience", AttributeValue::S(self.payment_experience.map_or_else(|| "None".to_string(), |pe| pe.to_data())))  // Assuming PaymentExperience can be converted to a String
+            .item("payment_method_type", AttributeValue::S(self.payment_method_type.map_or_else(|| "None".to_string(), |pmt| pmt.to_data())))  // Assuming PaymentMethodType can be converted to a String
+            .item("payment_method_data", AttributeValue::S(self.payment_method_data.map_or_else(|| "None".to_string(), |pmd| pmd.to_string())))
+            .item("business_sub_label", AttributeValue::S(self.business_sub_label.unwrap_or_else(|| "None".to_string())))
+            .item("straight_through_algorithm", AttributeValue::S(self.straight_through_algorithm.map_or_else(|| "None".to_string(), |sta| sta.to_string())))
+            .item("preprocessing_step_id", AttributeValue::S(self.preprocessing_step_id.unwrap_or_else(|| "None".to_string())))
+            .item("mandate_details", AttributeValue::S(self.mandate_details.map_or_else(|| "None".to_string(), |md| md.to_data())))  // Assuming MandateDataType can be converted to a String
+            .item("error_reason", AttributeValue::S(self.error_reason.unwrap_or_else(|| "None".to_string())))
+            .item("multiple_capture_count", AttributeValue::N(self.multiple_capture_count.unwrap_or(0).to_string()))
+            .item("connector_response_reference_id", AttributeValue::S(self.connector_response_reference_id.unwrap_or_else(|| "None".to_string())))
+            .item("amount_capturable", AttributeValue::N(self.amount_capturable.to_string()))
+            .item("updated_by", AttributeValue::S(self.updated_by))
+            .item("merchant_connector_id", AttributeValue::S(self.merchant_connector_id.unwrap_or_else(|| "None".to_string())))
+            .item("authentication_data", AttributeValue::S(self.authentication_data.map_or_else(|| "None".to_string(), |ad| ad.to_string())))
+            .item("encoded_data", AttributeValue::S(self.encoded_data.unwrap_or_else(|| "None".to_string())))
+            .item("unified_code", AttributeValue::S(self.unified_code.unwrap_or_else(|| "None".to_string())))
+            .item("unified_message", AttributeValue::S(self.unified_message.unwrap_or_else(|| "None".to_string())))
+            .item("net_amount", AttributeValue::N(self.net_amount.unwrap_or(0).to_string()))
+            .item("external_three_ds_authentication_attempted", AttributeValue::Bool(self.external_three_ds_authentication_attempted.unwrap_or(false)))
+            .item("authentication_connector", AttributeValue::S(self.authentication_connector.unwrap_or_else(|| "None".to_string())))
+            .item("authentication_id", AttributeValue::S(self.authentication_id.unwrap_or_else(|| "None".to_string())))
+            .item("mandate_data", AttributeValue::S(self.mandate_data.map_or_else(|| "None".to_string(), |md| md.to_data())))
+            .item("fingerprint_id", AttributeValue::S(self.fingerprint_id.unwrap_or_else(|| "None".to_string())))
+            .item("payment_method_billing_address_id", AttributeValue::S(self.payment_method_billing_address_id.unwrap_or_else(|| "None".to_string())))
+            .item("charge_id", AttributeValue::S(self.charge_id.unwrap_or_else(|| "None".to_string())))
+            .item("client_source", AttributeValue::S(self.client_source.unwrap_or_else(|| "None".to_string())))
+            .item("client_version", AttributeValue::S(self.client_version.unwrap_or_else(|| "None".to_string())));
+
+        Ok(q)
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -371,6 +439,57 @@ impl PaymentIntent {
         for_opt(stmt, &self.charges, 41)?;
         for_opt(stmt, &self.frm_metadata, 42)?;
         Ok(())
+    }
+
+    #[cfg(feature = "dynamo")]
+    pub fn put_item(self, client : &aws_sdk_dynamodb::Client) -> Result<PutItemFluentBuilder, Box<dyn std::error::Error>>{
+        let query = client.put_item()
+            .table_name("payment_intents")
+            .item("payment_id", AttributeValue::S(self.payment_id))
+            .item("merchant_id", AttributeValue::S(self.merchant_id))
+            .item("status", AttributeValue::S(self.status))
+            .item("amount", AttributeValue::N(self.amount.to_string()))
+            .item("currency", AttributeValue::S(self.currency.map_or_else(|| "None".to_string(), |c| c.to_data())))
+            .item("amount_captured", AttributeValue::N(self.amount_captured.unwrap_or(0).to_string()))
+            .item("customer_id", AttributeValue::S(self.customer_id.unwrap_or_else(|| "None".to_string())))
+            .item("description", AttributeValue::S(self.description.unwrap_or_else(|| "None".to_string())))
+            .item("return_url", AttributeValue::S(self.return_url.unwrap_or_else(|| "None".to_string())))
+            .item("metadata", AttributeValue::S(self.metadata.map_or_else(|| "None".to_string(), |m| m.to_data())))
+            .item("connector_id", AttributeValue::S(self.connector_id.unwrap_or_else(|| "None".to_string())))
+            .item("shipping_address_id", AttributeValue::S(self.shipping_address_id.unwrap_or_else(|| "None".to_string())))
+            .item("billing_address_id", AttributeValue::S(self.billing_address_id.unwrap_or_else(|| "None".to_string())))
+            .item("statement_descriptor_name", AttributeValue::S(self.statement_descriptor_name.unwrap_or_else(|| "None".to_string())))
+            .item("statement_descriptor_suffix", AttributeValue::S(self.statement_descriptor_suffix.unwrap_or_else(|| "None".to_string())))
+            .item("created_at", AttributeValue::S(self.created_at.to_data()))
+            .item("modified_at", AttributeValue::S(self.modified_at.to_data()))
+            .item("last_synced", AttributeValue::S(self.last_synced.map_or_else(|| "None".to_string(), |ls: PrimitiveDateTime| ls.to_data())))
+            .item("setup_future_usage", AttributeValue::S(self.setup_future_usage.unwrap_or_else(|| "None".to_string())))
+            .item("off_session", AttributeValue::Bool(self.off_session.unwrap_or(false)))
+            .item("client_secret", AttributeValue::S(self.client_secret.unwrap_or_else(|| "None".to_string())))
+            .item("active_attempt_id", AttributeValue::S(self.active_attempt_id))
+            .item("business_country", AttributeValue::S(self.business_country.unwrap_or_else(|| "None".to_string())))
+            .item("business_label", AttributeValue::S(self.business_label.unwrap_or_else(|| "None".to_string())))
+            .item("order_details", AttributeValue::S(self.order_details.map_or_else(|| "None".to_string(), |od| od.to_data())))
+            .item("allowed_payment_method_types", AttributeValue::S(self.allowed_payment_method_types.map_or_else(|| "None".to_string(), |apmt| apmt.to_data())))
+            .item("connector_metadata", AttributeValue::S(self.connector_metadata.map_or_else(|| "None".to_string(), |cm| cm.to_data())))
+            .item("feature_metadata", AttributeValue::S(self.feature_metadata.map_or_else(|| "None".to_string(), |fm| fm.to_data())))
+            .item("attempt_count", AttributeValue::N(self.attempt_count.to_string()))
+            .item("profile_id", AttributeValue::S(self.profile_id.unwrap_or_else(|| "None".to_string())))
+            .item("merchant_decision", AttributeValue::S(self.merchant_decision.unwrap_or_else(|| "None".to_string())))
+            .item("payment_link_id", AttributeValue::S(self.payment_link_id.unwrap_or_else(|| "None".to_string())))
+            .item("payment_confirm_source", AttributeValue::S(self.payment_confirm_source.unwrap_or_else(|| "None".to_string())))
+            .item("updated_by", AttributeValue::S(self.updated_by))
+            .item("surcharge_applicable", AttributeValue::Bool(self.surcharge_applicable.unwrap_or(false)))
+            .item("request_incremental_authorization", AttributeValue::S(self.request_incremental_authorization.unwrap_or_else(|| "None".to_string())))
+            .item("incremental_authorization_allowed", AttributeValue::Bool(self.incremental_authorization_allowed.unwrap_or(false)))
+            .item("authorization_count", AttributeValue::N(self.authorization_count.unwrap_or(0).to_string()))
+            .item("session_expiry", AttributeValue::S(self.session_expiry.map_or_else(|| "None".to_string(), |se| se.to_data())))
+            .item("fingerprint_id", AttributeValue::S(self.fingerprint_id.unwrap_or_else(|| "None".to_string())))
+            .item("request_external_three_ds_authentication", AttributeValue::Bool(self.request_external_three_ds_authentication.unwrap_or(false)))
+            .item("charges", AttributeValue::S(self.charges.map_or_else(|| "None".to_string(), |c| c.to_data())))
+            .item("frm_metadata", AttributeValue::S(self.frm_metadata.map_or_else(|| "None".to_string(), |fm| fm.to_data())));
+        Ok(query)
+
     }
 }
 
@@ -961,3 +1080,22 @@ pub struct PaymentAttemptResponse {
 pub struct PaymentIntentResponse {
     pub pi : String
 }
+
+trait ToData : Serialize{
+    fn to_data(&self) -> String{
+        serde_json::to_string(&self).context("serde json failed").unwrap()
+    }
+}
+
+impl ToData for Currency{}
+impl ToData for PaymentMethod{}
+impl ToData for CaptureMethod{}
+impl ToData for AuthenticationType{}
+impl ToData for PaymentExperience{}
+impl ToData for PaymentMethodType{}
+impl ToData for MandateDataType{}
+impl ToData for MandateDetails{}
+
+impl ToData for PrimitiveDateTime{}
+impl ToData for serde_json::Value{}
+impl ToData for Vec<serde_json::Value> {}

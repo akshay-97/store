@@ -1,4 +1,6 @@
-use crate::store::RedisClient;
+use std::collections::HashMap;
+
+use crate::store::{DynamoClient, RedisClient};
 use crate::types::*;
 use anyhow::Context;
 use axum::response::IntoResponse;
@@ -10,6 +12,9 @@ use crate::store::CassClient;
 use cassandra_cpp::{BindRustType, LendingIterator};
 use fred::prelude::{HashesInterface, ServerInterface};
 use futures::{lock, StreamExt};
+
+use aws_sdk_dynamodb::types::*;
+
 #[async_trait::async_trait]
 pub trait PaymentIntentInterface {
     async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
@@ -88,6 +93,7 @@ fn retrieve_by_id() -> String{
 #[cfg(feature = "cassandra")]
 use charybdis::operations::Insert;
 use charybdis::options::Consistency;
+#[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl MerchantAccountInterface for CassClient {
     async fn create_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
@@ -389,4 +395,174 @@ impl PaymentAttemptInterface for RedisClient {
     async fn retrieve_by_id(&self, _ : String, _ : String) -> Result<(), Box<dyn std::error::Error>>{
         Ok(())
     }
+}
+
+#[async_trait::async_trait]
+ impl PaymentIntentInterface for crate::store::DynamoClient {
+    async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>{
+        let pi = PaymentIntent::new(payment_id, use_client_id);
+        let payment_id = pi.payment_id.clone();
+        let query = pi.put_item(&self.client)?;
+        query.send().await?;
+        Ok(PaymentIntentResponse{pi : payment_id})
+    }
+
+    async fn retrieve_intent<'a>(
+        &self,
+        payment_id: &'a str,
+    ) -> Result<(), Box<dyn std::error::Error>>{
+        retrieve_helper(&self.client, payment_id).await?;
+        Ok(())
+    }
+    async fn update_intent<'a>(
+        &self,
+        payment_id: &'a str,
+    ) -> Result<(), Box<dyn std::error::Error>>{
+        let mut record = retrieve_helper(&self.client, payment_id).await?;
+        let entry = record.get_mut("status").ok_or(anyhow::Error::msg("field not found"))?;
+        *entry = AttributeValue::S("SUCCESS".to_string());
+        let mut builder = self.client.put_item().table_name("payment_intents".to_string());
+        for (k,v) in record.into_iter(){
+            builder = builder.item(k,v)
+        }
+        builder.send().await;
+        Ok(())
+
+    }
+}
+
+async fn retrieve_helper(client : &aws_sdk_dynamodb::Client, payment_id : &'_ str) -> Result<HashMap<String, AttributeValue>, Box<dyn std::error::Error>>
+{
+    let key_av = AttributeValue::S(payment_id.to_string());
+    match client
+            .query()
+            .table_name("payment_intents".to_string())
+            .key_condition_expression("#key = :value".to_string())
+            .expression_attribute_names("#key".to_string(), "payment_id".to_string())
+            .expression_attribute_values(":value".to_string(), key_av)
+            .select(Select::AllAttributes)
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                if let Some(el) = resp.items
+                    .and_then(|mut v| v.pop())
+                {
+                    return Ok(el)
+                }
+                Err("no pi found".into())
+            },
+            Err(e) => Err(e.into())
+        }
+}
+
+#[async_trait::async_trait]
+impl PaymentAttemptInterface for DynamoClient{
+    async fn create_attempt(
+        &self,
+        payment_id: String,
+        version: String,
+    ) -> Result<PaymentAttemptResponse, Box<dyn std::error::Error>>
+    {
+        let pa = PaymentAttempt::new(payment_id, version);
+        let attempt_id = pa.attempt_id.clone();
+        let query = pa.put_item(&self.client)?;
+        query.send().await;
+        Ok(PaymentAttemptResponse { pa: attempt_id })
+    }
+
+    async fn retrieve_all<'a>(&self, payment_id: &'a str)
+        -> Result<(), Box<dyn std::error::Error>>
+    {
+        let _arr = retrieve_attempt_helper(&self.client, payment_id, None).await?;
+        Ok(())
+    }
+
+    async fn update_attempt<'a>(
+        &self,
+        payment_id: &'a str,
+        version: String,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    {
+        let mut obj =
+            retrieve_attempt_helper(&self.client, payment_id , Some(version.as_str()))
+            .await?
+            .pop()
+            .ok_or(anyhow::Error::msg("no record found"))?;
+        
+        let entry = obj.get_mut("status").ok_or(anyhow::Error::msg("field not found"))?;
+        *entry = AttributeValue::S("SUCCESS".to_string());
+        let mut builder = self.client.put_item().table_name("payment_attempts".to_string());
+        for (k,v) in obj.into_iter(){
+            builder = builder.item(k,v)
+        }
+        builder.send().await;
+        Ok(())
+
+    }
+
+    async fn retrieve_by_id(
+        &self,
+        payment_attempt_id : String,
+        payment_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>>
+    {
+        let _obj =
+            retrieve_attempt_helper(&self.client, payment_id.as_str(), Some(payment_attempt_id.as_str()))
+            .await?
+            .pop()
+            .ok_or(anyhow::Error::msg("no record found"))?;
+        Ok(())
+    }
+}
+
+
+async fn retrieve_attempt_helper(client : &aws_sdk_dynamodb::Client, payment_id : &'_ str, version : Option<&'_ str>) -> Result<Vec<HashMap<String, AttributeValue>>, Box<dyn std::error::Error>>
+{
+    let key_av = AttributeValue::S(payment_id.to_string());
+    
+    let mut queryBuilder = client
+            .query()
+            .table_name("payment_intents".to_string())
+            .key_condition_expression("#key = :value".to_string())
+            .expression_attribute_names("#key".to_string(), "payment_id".to_string())
+            .expression_attribute_values(":value".to_string(), key_av);
+    match version {
+        Some(v) => {
+            let skey_av =  AttributeValue::S(v.to_string());
+            queryBuilder = queryBuilder.key_condition_expression("#key = :value".to_string())
+                .expression_attribute_names("#key".to_string(), "attempt_id".to_string())
+                .expression_attribute_values(":value".to_string(), skey_av);
+        },
+        None => {}
+    }
+    
+    match queryBuilder
+            .select(Select::AllAttributes)
+            .send()
+            .await
+    {
+        Ok(resp) => {
+            if let Some(el) = resp.items
+            {
+                return Ok(el)
+            }
+            Err("no pi found".into())
+        },
+        Err(e) => Err(e.into())
+    }
+}
+
+
+#[async_trait::async_trait]
+impl MerchantAccountInterface for DynamoClient{
+    async fn create_account(
+        &self,
+        merchant_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>>{Ok(())}
+
+    async fn retrieve_account(
+        &self,
+        merchant_id : String,
+    ) -> Result<(), Box<dyn std::error::Error>>{Ok(())}
 }

@@ -7,6 +7,7 @@ use std::env;
 #[cfg(feature = "cassandra")]
 use cassandra_cpp::*;
 
+use aws_sdk_dynamodb as dynamo;
 use reqwest::Client;
 
 #[async_trait::async_trait]
@@ -75,6 +76,9 @@ impl App {
             #[cfg(feature = "cassandra")]
             db: Box::new(CassClient::new().await?),
 
+            #[cfg(feature = "dynamo")]
+            db : Box::new(DynamoClient::new().await),
+
             #[cfg(feature = "redis")]
             db: Box::new(RedisClient::new().await?),
 
@@ -84,13 +88,32 @@ impl App {
     }
 }
 
+#[cfg(feature = "dynamo")]
+#[derive(Clone)]
+pub struct DynamoClient {
+    pub client : dynamo::Client
+}
+
+
+#[cfg(feature = "dynamo")]
+impl DynamoClient{
+    async fn new() -> Self{
+        let config = aws_config::from_env().load().await;
+        Self{
+            client : dynamo::Client::new(&config)
+        }
+    }
+}
+
 #[cfg(feature = "cassandra")]
 use std::sync::Arc;
+#[cfg(feature = "cassandra")]
 pub struct CassClient {
     pub cassandra_session: Session,
     pub account_session: Arc<scylla::CachingSession>,
 }
 
+#[cfg(feature = "cassandra")]
 impl Clone for CassClient{
     fn clone(&self) -> Self {
         Self { cassandra_session: self.cassandra_session.clone(), account_session: Arc::clone(&self.account_session) }
@@ -116,10 +139,20 @@ impl Init for RedisClient {
     }
 }
 
+#[cfg(feature = "dynamo")]
+#[async_trait::async_trait]
+impl Init for DynamoClient {
+    async fn prepare(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+}
+
 #[cfg(feature = "cassandra")]
 impl StorageInterface for CassClient {}
 #[cfg(feature = "redis")]
 impl StorageInterface for RedisClient {}
+#[cfg(feature = "dynamo")]
+impl StorageInterface for DynamoClient {}
 
 #[cfg(feature = "cassandra")]
 impl CassClient {
