@@ -278,7 +278,7 @@ fn select_payment_methods_all() -> String {
 }
 
 fn update_payment_method() -> String{
-    "UPDATE payments.payment_method SET locker_id = ? AND fingerprint_id = ? where customer_id = ? AND payment_method_id = ?".to_owned()
+    "UPDATE payments.payment_method SET locker_id = ? , fingerprint_id = ? where customer_id = ? AND payment_method_id = ?".to_owned()
 }
 
 fn get_fid_query() -> String{
