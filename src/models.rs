@@ -20,6 +20,13 @@ pub trait PaymentMethodsInterface{
     async fn find_all_payment_method_by_customer_merchant(&self, customer_id : String)
         -> Result<usize, Box<dyn std::error::Error>>;
 
+    async fn update_payment_method(&self, customer_id : String, payment_method_id : String, locker_id : String,
+        fingerprint_id : String)
+        -> Result<(), Box<dyn std::error::Error>>;
+    
+    async fn get_by_fingerprint_id(&self, fingerprint_id : String) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn get_by_locker_id(&self, locker_id : String) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[async_trait::async_trait]
@@ -263,11 +270,23 @@ impl PaymentAttemptInterface for crate::store::SGPool{
 // }
 
 fn insert_payment_method() -> String {
-    "INSERT INTO accounts.test_methods (customer_id, merchant_id , payment_method_id, metadata) VALUES (?, ?, ?, ?);".to_owned()
+    "INSERT INTO payments.payment_method (customer_id, merchant_id , payment_method_id, fingerprint_id, locker_id, metadata) VALUES (?, ?, ?, ?);".to_owned()
 }
 
 fn select_payment_methods_all() -> String {
-    "SELECT * FROM accounts.test_methods WHERE customer_id = ? AND merchant_id = ?;".to_owned()
+    "SELECT * FROM payments.payment_method WHERE customer_id = ?".to_owned()
+}
+
+fn update_payment_method() -> String{
+    "UPDATE payments.payment_method SET locker_id = ? AND fingerprint_id = ? where customer_id = ? AND payment_method_id = ?".to_owned()
+}
+
+fn get_fid_query() -> String{
+    "SELECT * from payments.payment_method where fingerprint_id = ?".to_owned()
+}
+
+fn get_lid_query() -> String{
+    "SELECT * from payments.payment_method where locker_id = ?".to_owned()
 }
 
 #[cfg(feature = "astra")]
@@ -276,7 +295,7 @@ impl PaymentMethodsInterface for SGPool{
     async fn create_payment_method(&self, customer_id : String, payment_method_id : String)
         -> Result<String, Box<dyn std::error::Error>>{
             let query = stargate_grpc::Query::builder()
-                .keyspace("accounts")
+                .keyspace("payments")
                 .query(insert_payment_method().as_str())
                 .consistency(stargate_grpc::Consistency::LocalQuorum);
 
@@ -291,16 +310,55 @@ impl PaymentMethodsInterface for SGPool{
     async fn find_all_payment_method_by_customer_merchant(&self, customer_id : String)
         -> Result<usize, Box<dyn std::error::Error>>{
         let query = stargate_grpc::Query::builder()
-                        .keyspace("accounts")
+                        .keyspace("payments")
                         .consistency(stargate_grpc::Consistency::LocalQuorum)
                         .query(select_payment_methods_all().as_str())
-                        .bind((customer_id, "kaps"))
+                        .bind_name("customer_id", customer_id)
                         .build();
         
         let mut client = self.pool.get().await.unwrap();
         crate::utils::time_wrapper(client.execute_query(query), "payment_method", "FIND_ALL", None).await?;
         Ok(0usize)
         
+    }
+
+    async fn update_payment_method(&self, customer_id : String, payment_method_id : String,
+        locker_id : String, fingerprint_id : String)
+        -> Result<(), Box<dyn std::error::Error>>{
+            let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
+                        .query(update_payment_method().as_str())
+                        .bind((locker_id, fingerprint_id, customer_id, payment_method_id))
+                        .build();
+            let mut client = self.pool.get().await.unwrap();
+            crate::utils::time_wrapper(client.execute_query(query), "payment_method", "UPDATE", None).await?;
+            Ok(())
+            
+    }
+
+    async fn get_by_fingerprint_id(&self, fingerprint_id : String) -> Result<(),Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
+                        .query(get_fid_query().as_str())
+                        .bind_name("fingerprint_id", fingerprint_id)
+                        .build();
+            let mut client = self.pool.get().await.unwrap();
+            crate::utils::time_wrapper(client.execute_query(query), "payment_method", "FIND_fid", None).await?;
+            Ok(())
+    }
+
+    async fn get_by_locker_id(&self, locker_id : String) -> Result<(),Box<dyn std::error::Error>>{
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
+                        .query(get_lid_query().as_str())
+                        .bind_name("locker_id", locker_id)
+                        .build();
+            let mut client = self.pool.get().await.unwrap();
+            crate::utils::time_wrapper(client.execute_query(query), "payment_method", "FIND_lid", None).await?;
+            Ok(())
     }
 }
 

@@ -96,6 +96,9 @@ async fn start_app() {
         .route("/retrieve/payment_intent/:payment_id", get(retrieve))
         .route("/create/payment_method/:customer/:id", get(create_method))
         .route("/find/payment_methods/:customer_id", get(find_all_customer))
+        .route("/update/payment_methods/:customer_id/:pm_id/:fingerprint_id/:locker_id", get(update_customer))
+        .route("/find/payment_method_locker/:locker_id", get(find_pm_by_locker))
+        .route("/find/payment_method_fingerprint/:fingerprint_id", get(find_pm_by_fingerprint))
         .layer(trace)
         .with_state(store)
         .route("/health", get(|| async { "OK" }));
@@ -281,6 +284,36 @@ async fn find_all_customer(State(app) : State<App>, Path(customer_id) : Path<Str
             .await
             .map_err(|e| DB_ERR(e.to_string()))?;
         Ok(axum::Json(()))
+}
+
+async fn update_customer(State(app) : State<App>, Path((cust_id, pm_id,fingerprint_id, locker_id)) : Path<(String, String, String, String)>)
+    -> Result<impl IntoResponse, DB_ERR>{
+        let _ = app
+            .db
+            .update_payment_method(cust_id , pm_id, locker_id, fingerprint_id)
+            .await
+            .map_err(|e| DB_ERR(e.to_string()))?;
+        Ok(axum::Json(()))
+    }
+
+async fn find_pm_by_locker(State(app) : State<App>, Path(locker_id) : Path<String>)
+-> Result<impl IntoResponse, DB_ERR>{
+    let _ = app
+        .db
+        .get_by_fingerprint_id(locker_id)
+        .await
+        .map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(()))
+}   
+
+async fn find_pm_by_fingerprint(State(app) : State<App>, Path(fingerprint_id) : Path<String>)
+    -> Result<impl IntoResponse, DB_ERR>{
+    let _ = app
+        .db
+        .get_by_locker_id(fingerprint_id)
+        .await
+        .map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(()))
 }
 struct DB_ERR(String);
 

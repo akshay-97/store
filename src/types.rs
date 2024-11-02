@@ -1098,68 +1098,18 @@ pub struct PaymentMethods {
     pub merchant_id: String,
     pub payment_method_id: String,
      // #[diesel(deserialize_as = super::OptionalDieselArray<storage_enums::Currency>)]
-    pub accepted_currency: Option<String>,
-    pub scheme: Option<String>,
-    pub token: Option<String>,
-    pub cardholder_name: Option<String>,
-    pub issuer_name: Option<String>,
-    pub issuer_country: Option<String>,
-    // #[diesel(deserialize_as = super::OptionalDieselArray<String>)]
-    pub payer_country: Option<String>,
-    pub is_stored: Option<bool>,
-    pub swift_code: Option<String>,
-    pub direct_debit_token: Option<String>,
-    pub created_at: String,
-    pub last_modified: String,
-    pub payment_method: Option<String>,
-    pub payment_method_type: Option<String>,
-    pub payment_method_issuer: Option<String>,
-    pub payment_method_issuer_code: Option<String>,
-    pub metadata: Option<String>,
-    pub payment_method_data: Option<String>,
     pub locker_id: Option<String>,
-    pub last_used_at: String,
-    pub connector_mandate_details: Option<String>,
-    pub customer_acceptance: Option<String>,
-    pub status: String,
-    pub network_transaction_id: Option<String>,
-    pub client_secret: Option<String>,
-    pub payment_method_billing_address: Option<String>,
-    pub updated_by: Option<String>,
-    pub version: String,
+    pub fingerprint_id : Option<String>,
+    pub metadata : Option<String>
 }
 
 impl PaymentMethods{
     pub fn new(customer : String, pi : String) -> Result<Self, Box<dyn std::error::Error>>{
         Ok(Self { customer_id: customer, merchant_id: "kaps".to_string(),
             payment_method_id: pi,
-            accepted_currency: Some("ID".to_string()),
-            scheme: Some("tls".to_string()),
-            token:  Some("randomeString12412953w23421".to_owned()),
-            cardholder_name: OptString("name"),
-            issuer_name: OptString("name"),
-            issuer_country: OptString("name"),
-            payer_country: OptString("name"), is_stored: Some(true),
-            swift_code: OptString("name"),
-            direct_debit_token: OptString("name"),
-            created_at: serde_json::to_string(&time::PrimitiveDateTime::MAX)?,
-            last_modified: serde_json::to_string(&time::PrimitiveDateTime::MAX)?,
-            payment_method: OptString("CARD"),
-            payment_method_type: OptString("MASTERCARD"),
-            payment_method_issuer: OptString("CARD_NETWORK"),
-            payment_method_issuer_code: OptString("CARD_NETWORK"),
             metadata: OptString("metadata"),
-            payment_method_data: Some(serde_json::to_string(&get_large_value())?),
-            locker_id: OptString("CARD_NETWORK"),
-            last_used_at: serde_json::to_string(&time::PrimitiveDateTime::MAX)?,
-            connector_mandate_details: Some(serde_json::to_string(&get_large_value())?),
-            customer_acceptance: OptString("CARD_NETWORK"),
-            status: "NEW".to_string(),
-            network_transaction_id: OptString("CARD_NETWORK"),
-            client_secret: OptString("CARD_NETWORK"),
-            payment_method_billing_address: OptString("CARD_NETWORK"),
-            updated_by: OptString("CARD_NETWORK"),
-            version: "v1".to_string()
+            locker_id: None,
+            fingerprint_id: None
         })
     }
 
@@ -1167,10 +1117,11 @@ impl PaymentMethods{
     pub fn bind_statement(self, query : stargate_grpc::query::QueryBuilder)
         -> Result<stargate_grpc::query::QueryBuilder, Box<dyn std::error::Error>>{
         Ok(query
-            .bind_ith(0, self.customer_id)
-            .bind_ith(1, self.merchant_id)
-            .bind_ith(2, self.payment_method_id)
-            .bind_ith(3, self.metadata.unwrap_or("random".to_string()))
+            .bind_name("customer_id", self.customer_id)
+            .bind_name("merchant_id", self.merchant_id)
+            .bind_name("payment_method_id", self.payment_method_id)
+            .bind_name("metadata", self.metadata.unwrap_or("random".to_string()))
+            .bind_name("fingerprint_id", self.fingerprint_id)
             // .bind_ith(3, self.accepted_currency)
             // .bind_ith(4, self.scheme)
             // .bind_ith(5, self.cardholder_name)
