@@ -1122,6 +1122,7 @@ impl PaymentMethods{
             .bind_name("payment_method_id", self.payment_method_id)
             .bind_name("metadata", self.metadata.unwrap_or("random".to_string()))
             .bind_name("fingerprint_id", self.fingerprint_id)
+            .bind_name("locker_id", self.locker_id)
             // .bind_ith(3, self.accepted_currency)
             // .bind_ith(4, self.scheme)
             // .bind_ith(5, self.cardholder_name)

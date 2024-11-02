@@ -270,7 +270,7 @@ impl PaymentAttemptInterface for crate::store::SGPool{
 // }
 
 fn insert_payment_method() -> String {
-    "INSERT INTO payments.payment_method (customer_id, merchant_id , payment_method_id, fingerprint_id, locker_id, metadata) VALUES (?, ?, ?, ?);".to_owned()
+    "INSERT INTO payments.payment_method (customer_id, merchant_id , payment_method_id, fingerprint_id, locker_id, metadata) VALUES (?, ?, ?, ?, ?, ?);".to_owned()
 }
 
 fn select_payment_methods_all() -> String {
