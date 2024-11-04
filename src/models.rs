@@ -30,6 +30,14 @@ pub trait PaymentMethodsInterface{
 }
 
 #[async_trait::async_trait]
+pub trait RefundInterface{
+    async fn create_refund(&self, refund_id : String, payment_id : String)
+        -> Result<String, Box<dyn std::error::Error>>;
+    async fn find_refunds_by_payment_id(&self, payment_id: String)
+        -> Result<usize, Box<dyn std::error::Error>>;
+}
+
+#[async_trait::async_trait]
 pub trait PaymentIntentInterface {
     async fn create_intent(&self, payment_id: String, use_client_id : bool) -> Result<PaymentIntentResponse, Box<dyn std::error::Error>>;
     async fn retrieve_intent<'a>(
@@ -362,6 +370,47 @@ impl PaymentMethodsInterface for SGPool{
     }
 }
 
+fn insert_refund() -> &'static str{
+    "INSERT INTO payments.refund (refund_id , payment_id , amount, state) VALUES(? , ? , ? ,?)"
+}
+
+fn select_all_refunds() -> &'static str{
+    "SELECT * from payments.refund where payment_id = ?"
+}
+
+#[cfg(feature = "astra")]
+#[async_trait::async_trait]
+impl RefundInterface for SGPool{
+    async fn create_refund(&self, refund_id : String, payment_id : String)
+        -> Result<String, Box<dyn std::error::Error>>
+    {   
+        let query = stargate_grpc::Query::builder()
+            .keyspace("payments")
+            .query(insert_refund())
+            .consistency(stargate_grpc::Consistency::LocalQuorum);
+
+        let refund = Refund::new(refund_id, payment_id);
+        let up_query = refund.bind_statement(query)?.build();
+
+        let mut client = self.pool.get().await.unwrap();
+        crate::utils::time_wrapper(client.execute_query(up_query), "refund", "CREATE", None).await?;
+        Ok(String::from("success"))
+    }
+    async fn find_refunds_by_payment_id(&self, payment_id: String)
+        -> Result<usize, Box<dyn std::error::Error>>
+    {
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
+                        .query(select_all_refunds())
+                        .bind_name("payment_id", payment_id)
+                        .build();
+        
+        let mut client = self.pool.get().await.unwrap();
+        let resp : stargate_grpc::ResultSet = crate::utils::time_wrapper(client.execute_query(query), "payment_method", "FIND_ALL", None).await?.try_into()?;
+        Ok(resp.rows.len())
+    }
+}
 #[cfg(feature = "cassandra")]
 #[async_trait::async_trait]
 impl PaymentAttemptInterface for CassClient {

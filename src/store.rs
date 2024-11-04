@@ -26,6 +26,7 @@ pub trait StorageInterface:
     + PaymentAttemptInterface
     + MerchantAccountInterface
     + PaymentMethodsInterface
+    + RefundInterface
     + Send
     + Sync
     + 'static

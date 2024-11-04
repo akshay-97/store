@@ -1,5 +1,6 @@
 use std::time::UNIX_EPOCH;
 
+use charybdis::query;
 use charybdis::scylla::{CqlValue, FromCqlVal};
 use serde::{Deserialize, Serialize};
 use stargate_grpc::IntoValue;
@@ -1090,6 +1091,35 @@ fn s_opt<T:Serialize>(d : Option<T>) -> Result<String,Box<dyn std::error::Error>
         return serde_json::to_string(&v).map_err(|e| e.into())
     }
     return Ok("".to_owned())
+}
+
+pub struct Refund{
+    pub refund_id : String,
+    pub payment_id : String,
+    pub amount : f64,
+    pub status : String,
+}
+
+impl Refund{
+    pub fn new(refund_id : String, payment_id : String) -> Self{
+        Self{
+            refund_id,
+            payment_id,
+            amount: 64f64,
+            status : "NEW".to_string()
+        }
+    }
+
+    pub fn bind_statement(self, query: stargate_grpc::query::QueryBuilder)
+        -> Result<stargate_grpc::query::QueryBuilder, Box<dyn std::error::Error>>
+    {
+        Ok(query
+            .bind_name("payment_id", self.payment_id)
+            .bind_name("refund_id", self.refund_id)
+            .bind_name("amount", self.amount)
+            .bind_name("status", self.status)
+        )
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

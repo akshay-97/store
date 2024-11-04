@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use scylla::frame::response::result;
 use std::env;
 mod models;
 mod store;
@@ -99,6 +100,9 @@ async fn start_app() {
         .route("/update/payment_methods/:customer_id/:pm_id/:fingerprint_id/:locker_id", get(update_customer))
         .route("/find/payment_method_locker/:locker_id", get(find_pm_by_locker))
         .route("/find/payment_method_fingerprint/:fingerprint_id", get(find_pm_by_fingerprint))
+        //refunds
+        .route("/create/refund/:refund_id/:payment_id", get(create_refund))
+        .route("/find/refunds/:payment_id", get(find_refunds))
         .layer(trace)
         .with_state(store)
         .route("/health", get(|| async { "OK" }));
@@ -315,6 +319,28 @@ async fn find_pm_by_fingerprint(State(app) : State<App>, Path(fingerprint_id) : 
         .map_err(|e| DB_ERR(e.to_string()))?;
     Ok(axum::Json(()))
 }
+
+async fn create_refund(State(app) : State<App>, Path((refund_id, pid)) : Path<(String, String)>)
+    -> Result<impl IntoResponse, DB_ERR>
+{
+    let _ = app
+        .db
+        .create_refund(refund_id, pid)
+        .await
+        .map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(()))
+}
+
+async fn find_refunds(State(app) : State<App>, Path(pid) : Path<String>) -> Result<impl IntoResponse, DB_ERR>
+{
+    let res = app
+        .db
+        .find_refunds_by_payment_id(pid)
+        .await
+        .map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(res))
+}
+
 struct DB_ERR(String);
 
 impl IntoResponse for DB_ERR {
