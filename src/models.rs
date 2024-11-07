@@ -136,7 +136,17 @@ impl MerchantAccountInterface for crate::store::SGPool{
     async fn create_account(
         &self,
         merchant_id : String,
-    ) -> Result<(), Box<dyn std::error::Error>> {Ok(())}
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let new = MerchantAccount::new(merchant_id)?;
+        let query = stargate_grpc::Query::builder()
+                .keyspace("payments")
+                .query(insert_intent_cql().as_str())
+                .consistency(stargate_grpc::Consistency::EachQuorum);
+        let mut client = self.pool.get().await.unwrap();
+        let updated_query = new.bind_statement(query)?.build();
+        crate::utils::time_wrapper(client.execute_query(updated_query), "merchant_account", "CREATE", None).await?;
+        Ok(())
+    }
 
     async fn retrieve_account(
         &self,
@@ -371,7 +381,7 @@ impl PaymentMethodsInterface for SGPool{
 }
 
 fn insert_refund() -> &'static str{
-    "INSERT INTO payments.refund (refund_id , payment_id , amount, state) VALUES(? , ? , ? ,?)"
+    "INSERT INTO payments.refund (refund_id , payment_id , amount, status) VALUES(? , ? , ? ,?)"
 }
 
 fn select_all_refunds() -> &'static str{

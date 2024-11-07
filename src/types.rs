@@ -975,64 +975,41 @@ pub struct MandateDetails {
 )]
 pub struct MerchantAccount {
     pub merchant_id: String,
-    pub return_url: Option<String>,
-    pub enable_payment_response_hash: bool,
-    pub payment_response_hash_key: Option<String>,
-    pub redirect_to_merchant_with_http_post: bool,
     pub merchant_name: Option<String>,
-    pub merchant_details: Option<String>,
-    pub webhook_details: Option<String>,
     pub sub_merchants_enabled: Option<bool>,
     pub parent_merchant_id: Option<String>,
     pub publishable_key: Option<String>,
     pub storage_scheme: String,
-    pub locker_id: Option<String>,
-    pub metadata: Option<String>,
-    pub routing_algorithm: Option<String>,
-    pub primary_business_details: String,
-    pub intent_fulfillment_time: Option<i64>,
-    pub created_at: Timestamp,
-    pub modified_at: Timestamp,
-    pub frm_routing_algorithm: Option<String>,
-    pub payout_routing_algorithm: Option<String>,
     pub organization_id: String,
-    pub is_recon_enabled: bool,
-    pub default_profile: Option<String>,
-    pub recon_status: String,
-    pub payment_link_config: Option<String>,
-    pub pm_collect_link_config: Option<String>,
+
 }
 
 impl MerchantAccount {
     pub fn new(merchant_id : String) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self { merchant_id,
-            return_url: Some("www.google.co.in".into()),
-            enable_payment_response_hash: false,
-            payment_response_hash_key: Some("hash".into()),
-            redirect_to_merchant_with_http_post: true,
             merchant_name: Some("kaps".into()),
-            merchant_details: None,
-            webhook_details: Some("callback_url".into()),
             sub_merchants_enabled: None,
             parent_merchant_id: None,
             publishable_key: Some("AAAAB3NzaC1yc2EAAAADAQABAAACAQC+gCy875BbJDjy/KDczr84xswL1edCE82IkOCBeYuOPbmhR251K9r7UFjlXioa5UnMpRals/pMSkz9MF7yUTzPDg+NjfmsZ8rgHqTKJ7z/yUWEyxd3TcUh0xkkYMCfrA+9rLqgolBiasAOApBDYTi0BsBlfAgNIaTgg7xTX7PHUzceAvujJel1Q6V+bABnFvlDu6kWUhXlrPafWRPUSQz2wEsO7vqrE9UfP+CtuXrJ+t6pMbkVDGc0+JWaPJjBXMjxljBfZHw7UVbHmPlYYTwOGD/IWOgisFfvnutR4JvDZA5elWqkXj+ZEsOw4QFXw71o+b2YWrRBa8l+AFn//zPQvLB753wQVuhzmsidToLss2DfGLdrYKVuCTX7a7OhxKDYRYeyZgeqWK8xVqiyayXgvuxcZV2g+mHi2WuUGGJ6Ycj+JZ9Vh67EnplDmJAKCFXCenS4ou9rMCHqD6i9UVgzakzxy/wd5Cj6R26uKqKo8rZDw9D6zKDzF45NbVh+obAFh/9MuzSCaaL5pXWPUI0kI7iZ8lU7rC8HAj5HhynLZd+rfQazVo+qcoQMxO+A9+fFubru41Aku6siQgv6oXNiGSOcb4bgEDlCBQ/uQgNCn9Vdq3f1yWqC1eAQtwoB4YTE2DZrY1TVZiN202JQNweIIOQUANyKRVV2ITZketmeZQ==".into()),
             storage_scheme: "cassandra".into(),
-            locker_id: None,
-            metadata: None,
-            routing_algorithm: Some(serde_json::to_string(&get_large_value())?.into()),
-            primary_business_details: serde_json::to_string(&get_large_value())?.into(),
-            intent_fulfillment_time: None,
-            created_at: chrono::DateTime::default(),
-            modified_at: chrono::DateTime::default(),
-            frm_routing_algorithm: Some(serde_json::to_string(&get_large_value())?.into()),
-            payout_routing_algorithm: Some(serde_json::to_string(&get_large_value())?.into()),
             organization_id: "kaps".into(),
-            is_recon_enabled: false,
-            default_profile: None,
-            recon_status: "NONE".into(),
-            payment_link_config: Some("link_config".into()),
-            pm_collect_link_config: None
         })
+    }
+
+    pub fn bind_statement(self, query: stargate_grpc::query::QueryBuilder)
+        -> Result<stargate_grpc::query::QueryBuilder, Box<dyn std::error::Error>>
+    {   
+        Ok(
+            query
+                .bind_name("merchant_id", self.merchant_id)
+                .bind_name("merchant_name", self.merchant_name)
+                .bind_name("sub_merchants_enabled", self.sub_merchants_enabled)
+                .bind_name("parent_merchant_id", self.parent_merchant_id)
+                .bind_name("publishable_key", self.publishable_key)
+                .bind_name("storage_scheme", self.storage_scheme)
+                .bind_name("organization_id", self.organization_id)
+
+        )
     }
 }
 
