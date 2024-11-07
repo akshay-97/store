@@ -130,6 +130,12 @@ impl MerchantAccountInterface for CassClient {
         let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "FIND").await?;
     }
 }
+
+
+fn insert_account() -> &'static str{
+    "INSERT INTO payments.merchant_account (merchant_id, merchant_name, sub_merchants_enabled, parent_merchant_id, publishable_key, storage_scheme, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?);"
+}
+
 #[cfg(feature = "astra")]
 #[async_trait::async_trait]
 impl MerchantAccountInterface for crate::store::SGPool{
@@ -140,7 +146,7 @@ impl MerchantAccountInterface for crate::store::SGPool{
         let new = MerchantAccount::new(merchant_id)?;
         let query = stargate_grpc::Query::builder()
                 .keyspace("payments")
-                .query(insert_intent_cql().as_str())
+                .query(insert_account())
                 .consistency(stargate_grpc::Consistency::EachQuorum);
         let mut client = self.pool.get().await.unwrap();
         let updated_query = new.bind_statement(query)?.build();
