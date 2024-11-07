@@ -136,6 +136,10 @@ fn insert_account() -> &'static str{
     "INSERT INTO payments.merchant_account (merchant_id, merchant_name, sub_merchants_enabled, parent_merchant_id, publishable_key, storage_scheme, organization_id) VALUES (?, ?, ?, ?, ?, ?, ?);"
 }
 
+fn retrieve_account() -> &'static str{
+    "SELECT * from payments.merchant_account where merchant_id = ?"
+}
+
 #[cfg(feature = "astra")]
 #[async_trait::async_trait]
 impl MerchantAccountInterface for crate::store::SGPool{
@@ -157,7 +161,19 @@ impl MerchantAccountInterface for crate::store::SGPool{
     async fn retrieve_account(
         &self,
         merchant_id : String,
-    ) -> Result<(), Box<dyn std::error::Error>> {Ok(())}
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let query = stargate_grpc::Query::builder()
+                        .keyspace("payments")
+                        .consistency(stargate_grpc::Consistency::LocalQuorum)
+                        .query(retrieve_account())
+                        .bind_name("merchant_id" , merchant_id)
+                        .build();
+        
+        let mut client = self.pool.get().await.unwrap();
+        //client.execute_query(query).await?;
+        crate::utils::time_wrapper(client.execute_query(query), "merchant_account", "FIND", None).await?;
+        Ok(())
+    }
 
 }
 

@@ -77,6 +77,7 @@ async fn start_app() {
     let router = axum::Router::new()
         .route("/init_db", get(init_db))
         .route("/create/account/:merchant_id", get(create_account))
+        .route("/get/account/:merchant_id", get(get_account))
         .route("/init_lag/:pid", get(init_lag))
         .route("/record_lag/:pid/:init_time", get(record_lag))
         .route("/create/:payment_id/:merchant_id", get(create_payment)) // create payment intent
@@ -177,6 +178,19 @@ async fn create_account(
         .map_err(|e| DB_ERR(e.to_string()))?;
     Ok(axum::Json(()))
 }
+
+async fn get_account(
+    State(app): State<App>,
+    Path(merchant_id): Path<String>,
+) -> Result<impl IntoResponse, DB_ERR> {
+    let _ = app
+        .db
+        .retrieve_account(merchant_id)
+        .await
+        .map_err(|e| DB_ERR(e.to_string()))?;
+    Ok(axum::Json(()))
+}
+
 
 async fn create_payment(
     State(app): State<App>,
