@@ -77,7 +77,7 @@ impl App {
             db: Box::new(CassClient::new().await?),
 
             #[cfg(feature = "dynamo")]
-            db : Box::new(DynamoClient::new().await),
+            //db : Box::new(DynamoClient::new().await),
 
             #[cfg(feature = "redis")]
             db: Box::new(RedisClient::new().await?),

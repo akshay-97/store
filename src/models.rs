@@ -98,8 +98,12 @@ use charybdis::options::Consistency;
 impl MerchantAccountInterface for CassClient {
     async fn create_account(&self, merchant_id : String) -> Result<(), Box<dyn std::error::Error>>{
         let account = MerchantAccount::new(merchant_id)?;
-        let query = account.insert().consistency(Consistency::EachQuorum);
-        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "CREATE", None).await?;
+        let query = account.insert().consistency(Consistency::LocalQuorum);
+        let _result = crate::utils::time_wrapper(query.execute(self.account_session.as_ref()), "merchant_account", "CREATE", None).await;
+        //println!("what is result {:?}", _result);
+        if let Err(e) = _result{
+            println!("what is error: {:?}", e);
+        }
         Ok(())
     }
 
